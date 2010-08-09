@@ -1,0 +1,50 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <script type="text/javascript" src="jquery.js"></script>
+    <title>dogvibes AJAX/JSON demo</title>
+<body>
+
+<h1>dogvibes AJAX/JSON demo</h1>
+
+<p>This page demonstrates a web client accessing the API by AJAX requests.
+Search results are returned in JSON format and HTML nodes are rendered dynamically.
+
+<p>Search for music: <input type="text" id="searchField"><input type="submit" id="searchButton"></p>
+
+<h2>Search results</h2>
+<div id="results">
+  <i>None so far...</i>
+</div>
+
+
+<script language="javascript" type="text/javascript">
+
+var server = "http://localhost:3000"
+
+function addSongToList(artist, title, key) {
+  document.getElementById("results").innerHTML += artist + " - " + title + " <a href=\"#\" id=\"" + key + "\" class=\"playButton\">[&gt;]</a><br>";
+}
+
+$("#searchButton").click(function () {
+  $("#results").empty();
+  document.getElementById("results").innerHTML = "<i>Loading...</i>";
+  $.getJSON(server + "/search?q=" + $("#searchField").val() + "&callback=?", function(songs) {
+    $("#results").empty();
+    $.each(songs, function(i, song) {
+      addSongToList(song.artist, song.title, song.key);
+      $(".playButton").click(function () { 
+        $.ajax(server + "/play?key=" + this.id);
+        alert("Playing. Click OK to stop.");
+        $.ajax(server + "/stop");
+      });
+    });
+  });
+});
+
+</script>
+
+</body>
+</html>

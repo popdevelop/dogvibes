@@ -1,0 +1,169 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Dogvibes</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="icon" type="image/png" href="img/favicon.png" />
+<link rel="stylesheet" type="text/css" media="all" href="css/style.css" />
+<link rel="stylesheet" type="text/css" media="all" href="css/skin.css" />
+<link rel="stylesheet" type="text/css" media="all" href="css/jui/jquery-ui.css" />
+<script type='text/javascript' src='js/jquery-1.4.2.min.js'></script> 
+<script type='text/javascript' src='js/jquery-ui.js'></script> 
+<script type='text/javascript' src='js/jquery.jsonp.min.js'></script>
+<script type='text/javascript' src='js/jquery.hotkeys-0.7.9.min.js'></script>
+<script type='text/javascript' src='js/jquery.tablesorter.min.js'></script>
+<script type='text/javascript' src='js/jquery.growl.js'></script>	
+<script type='text/javascript' src='js/cookies.js'></script>	  
+<script type='text/javascript' src='js/dogvibes-core.js'></script>	
+<script type='text/javascript' src='js/dogbone-core.js'></script>	
+<script type='text/javascript' src='js/dogbone-modules.js'></script>	
+
+<script type="text/javascript" src="js/swfobject.js"></script>
+<script type="text/javascript" src="js/FABridge.js"></script>
+<script type="text/javascript" src="js/web_socket.js"></script>
+
+<script type="text/javascript">
+  WebSocket.__swfLocation = "WebSocketMain.swf";
+</script>
+</head>
+
+<body>
+<div id="top" class="theme-top">
+  <form id="Search-form" action="">
+  <div><input type="text" id="Search-input" class="theme-searchfield" /></div>
+  </form>
+</div>
+<div id="drag-dummy"></div>
+<div id="EventContainer"></div>
+<div id="leftcol" class="theme-leftcol resizable-right">
+  <div id="navigation" class="theme-navigation resizable-bottom"> 
+    <div id="userinfo" class="theme-userinfo theme-titlebar"></div>
+    <ul id="Main-section"></ul>
+    <ul id="Search-section"></ul>
+    <ul id="Playlist-section"></ul>
+    <ul id="Newlist-section"></ul>    
+  </div>
+  <div id="currentsong" class="theme-currentsong resizable-top">
+    <ul id="trackinfo" class="theme-trackinfo">
+      <li id="TrackInfo-title">&nbsp;</li>
+      <li id="TrackInfo-artist">&nbsp;</li>      
+    </ul>
+  </div>
+</div>
+
+<div id="separator" class="theme-separator">
+</div>
+
+<div id="rightcol" class="theme-rightcol resizable-left">
+  <ul id="titlebar" class="theme-titlebar">
+    <li>&nbsp;</li>
+  </ul>
+  <div id="content" class="theme-content">
+  
+    <!-- All the pages //-->
+    <div id="home">
+    <img src="css/img/spotify-core-logo-64x64.png" alt="Spotify Core Logo" />    
+    <h2>Welcome to Dogvibes!</h2>
+    <p>
+    You're looking at Dogbone, the HTML client to Dogvibes.
+    </p>
+<div>
+<h3>What is dogvibes?</h3>
+<p>
+Dogvibes is social music. Music is output from one place but is controlled from any connected device. Such devices can be your laptop, phone, remote control or whatever solution that connects with our easy-to-use interface.
+</p>
+<p>
+The music player currently plays Spotify and more formats are on their way. Future plans include integrating services such as Last.fm and playback on Apple Airport Express.
+</p>
+</div>
+<div>
+<h3>How does it work?</h3>
+<p>
+For the tech guys: Dogvibes was the first Linux audio player to fully integrate Spotify using their released library. The Dogvibes project consists of a fully working Spotify GStreamer source, a Python server handling playback control via either REST or WebSocket requests and a web client, Dogbone, that imitates the Spotify UI (to lawyers: just for fun though, we won't sell it).
+</p>
+</div>
+    </div>
+    <div id="playqueue">
+      <h3 id="Playqueue-info">&nbsp;</h3>
+      <!-- Template for play queue content //-->
+      <table id="Playqueue-content" class="theme-tracktable">
+        <thead>
+          <tr class="template">
+          <th id="Playqueue-space">&nbsp;</th>
+          <th id="Playqueue-title">Track</th>
+          <th id="Playqueue-artist">Artist</th>
+          <th id="Playqueue-duration">Time</th>
+          <th id="Playqueue-album">Album</th>
+          <th id="Playqueue-votes">Votes</th>
+          </tr>
+        </thead>
+        <tbody id="Playqueue-items">        
+        </tbody>
+      </table>    
+    </div>
+    <div id="search">
+      <h3 id="Search-info">&nbsp;</h3>
+      <!-- Template for search content //-->
+      <table id="Search-content" class="theme-tracktable">
+        <thead>
+          <tr class="template">
+          <th id="Search-space">&nbsp;</th>
+          <th id="Search-title">Track</th>
+          <th id="Search-artist">Artist</th>
+          <th id="Search-duration">Time</th>
+          <th id="Search-popularity">Popularity</th>
+          <th id="Search-album">Album</th>
+          </tr>
+        </thead>
+        <tbody id="Search-items">
+        </tbody>
+      </table>    
+    </div>
+    <div id="playlist">
+      <h3 id="Playlist-info">&nbsp;</h3>
+      <!-- Template for playlist content //-->
+      <table id="Playlist-content" class="theme-tracktable">
+        <thead>
+          <tr class="template">
+          <th id="Playlist-space">&nbsp;</th>
+          <th id="Playlist-title">Track</th>
+          <th id="Playlist-artist">Artist</th>
+          <th id="Playlist-duration">Time</th>
+          <th id="Playlist-album">Album</th>
+          <th id="Playlist-votes">Votes</th>
+          </tr>
+        </thead>
+        <tbody id="Playlist-items">
+        </tbody>
+      </table>
+    </div>
+    
+    <div id="artist">
+    </div>
+    
+    <div id="album">
+    </div>    
+  </div>
+</div>
+<div id="bottom" class="theme-bottom">
+  <ul id="PlayControl">
+    <li id="pb-prev"><a>Prev</a></li>
+    <li id="pb-play"><a>Play</a></li>
+    <li id="pb-next"><a>Next</a></li>
+  </ul>
+  <div id="Volume">
+    <div id="Volume-slider"></div>
+    <div id="Volume-icon"></div>
+  </div>
+  <div id="TimeInfo">
+    <div id="TimeInfo-elapsed"></div>
+    <div id="TimeInfo-slider"></div>
+    <div id="TimeInfo-duration"></div>
+  </div> 
+  <div id="ConnectionIndicator-icon">
+  </div>
+</div>
+
+</body>
+
+</html>

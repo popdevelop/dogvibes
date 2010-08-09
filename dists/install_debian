@@ -1,0 +1,13 @@
+#/bin/sh
+
+# Spotify source
+cp gst-spot-src/src/.libs/libgstspot.lai debian/usr/lib/gstreamer-0.10/libgstspot.la
+cp gst-spot-src/src/.libs/libgstspot.so debian/usr/lib/gstreamer-0.10/libgstspot.so
+
+# Python Server
+rm debian/usr/lib/dogvibes/*
+cp dogvibes/src/*.py debian/usr/lib/dogvibes
+
+# Config files
+rm debian/etc/*
+cp dogvibes/src/*.conf debian/etc

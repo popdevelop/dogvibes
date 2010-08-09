@@ -1,0 +1,30 @@
+html, body {
+    font-family: Georgia;
+}
+
+.command {
+    line-height: 20px;
+    padding: 10px;
+    border-bottom: 1px dotted #aaa;
+}
+
+.command .cmd {
+    font-weight: bold;
+}
+
+.command .reply {
+    padding-top: 4px;
+    font-style: italic;
+}
+
+.command .test {
+    color: #fff;
+}
+
+.command .pass {
+    background-color: #0d0;
+}
+
+.command .fail {
+    background-color: #d00;
+}

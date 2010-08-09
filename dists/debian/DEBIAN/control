@@ -1,0 +1,12 @@
+Package: dogvibes
+Version: 0.02
+Section: audio
+Architecture: i386
+Essential: no
+Depends: libgstreamer0.10-0, python2.6, python-tagpy, python-sqlite, libsqlite3, libgstreamer-plugins-base0.10, python-cjson, python-twisted, python-twisted-web2
+Installed-Size: 1024
+Maintainer: Johan Gyllenspetz <johan.gyllenspetz@gmail.com>
+Conflicts:
+Replaces:
+Provides: dogvibes
+Description: dogvibes, the number one music server install at own risk

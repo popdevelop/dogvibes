@@ -1,0 +1,299 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>GUI a la Spotify</title>
+    <link rel="stylesheet" type="text/css" href="extjs/resources/css/ext-all.css" />
+
+
+    <script type="text/javascript" src="extjs/adapter/ext/ext-base.js"></script>
+    <script type="text/javascript" src="extjs/ext-all-debug.js"></script>
+    <script type="text/javascript">
+
+Ext.onReady(function() {
+			
+			var simple = new Ext.FormPanel({
+			        labelWidth: 120, // label settings here cascade unless overridden
+			        //url:'save-form.php',
+			        frame:true,
+		            title: 'Preferences',
+			        bodyStyle:'padding:5px 5px 0',
+			        width: 350,
+			        defaults: {width: 230},
+			        defaultType: 'textfield',
+
+			        items: [{
+			                fieldLabel: 'Spotify username',
+			                name: 'first',
+			                allowBlank:false
+			            },{
+			                fieldLabel: 'Spotify password',
+			                name: 'last'
+			            },{
+			                fieldLabel: 'Path to music',
+			                name: 'company'
+			            }
+			        ],
+
+			        buttons: [{
+			            text: 'Save'
+			        },{
+			            text: 'Cancel'
+			        }]
+			    });
+			
+			
+			Ext.app.SearchField = Ext.extend(Ext.form.TwinTriggerField, {
+			    initComponent : function(){
+			        Ext.app.SearchField.superclass.initComponent.call(this);
+			        this.on('specialkey', function(f, e){
+			            if(e.getKey() == e.ENTER){
+			                this.onTrigger2Click();
+			            }
+			        }, this);
+			    },
+
+			    validationEvent:false,
+			    validateOnBlur:false,
+			    trigger1Class:'x-form-clear-trigger',
+			    trigger2Class:'x-form-search-trigger',
+			    hideTrigger1:true,
+			    width:180,
+			    hasSearch : false,
+			    paramName : 'query',
+
+			    onTrigger1Click : function(){
+			        if(this.hasSearch){
+			            this.el.dom.value = '';
+			            var o = {start: 0};
+			            this.store.baseParams = this.store.baseParams || {};
+			            this.store.baseParams[this.paramName] = '';
+			            this.store.reload({params:o});
+			            this.triggers[0].hide();
+			            this.hasSearch = false;
+			        }
+			    },
+
+			    onTrigger2Click : function(){
+			        var v = this.getRawValue();
+			        if(v.length < 1){
+			            this.onTrigger1Click();
+			            return;
+			        }
+			        var o = {start: 0};
+			        this.store.baseParams = this.store.baseParams || {};
+			        this.store.baseParams[this.paramName] = v;
+			        this.store.reload({params:o});
+			        this.hasSearch = true;
+			        this.triggers[0].show();
+			    }
+			});
+			
+
+			Ext.state.Manager.setProvider(new Ext.state.CookieProvider());
+
+			    var myData = [
+			    ['Wonderwall', "Oasis", 165, "What's the Story Morning Glory"],
+		        ['Live Forever', "Oasis", 212, "Definately Maybe"],
+		        ['Until it Sleeps', "Metallica" ,254, "Metallica"],
+		        ['156', "Mew", 312, "Frengers"],
+		        ['Wonderwall', "Oasis", 165, "What's the Story Morning Glory"],
+		        ['Live Forever', "Oasis", 212, "Definately Maybe"],
+		        ['Until it Sleeps', "Metallica" ,254, "Metallica"],
+		        ['156', "Mew", 312, "Frengers"],
+			    ['Wonderwall', "Oasis", 165, "What's the Story Morning Glory"],
+		        ['Live Forever', "Oasis", 212, "Definately Maybe"],
+		        ['Until it Sleeps', "Metallica" ,254, "Metallica"],
+		        ['156', "Mew", 312, "Frengers"],
+			    ['Wonderwall', "Oasis", 165, "What's the Story Morning Glory"],
+		        ['Live Forever', "Oasis", 212, "Definately Maybe"],
+		        ['Until it Sleeps', "Metallica" ,254, "Metallica"],
+		        ['156', "Mew", 312, "Frengers"],
+			    ['Wonderwall', "Oasis", 165, "What's the Story Morning Glory"],
+		        ['Live Forever', "Oasis", 212, "Definately Maybe"],
+		        ['Until it Sleeps', "Metallica" ,254, "Metallica"],
+		        ['156', "Mew", 312, "Frengers"],
+			    ['Wonderwall', "Oasis", 165, "What's the Story Morning Glory"],
+		        ['Live Forever', "Oasis", 212, "Definately Maybe"],
+		        ['Until it Sleeps', "Metallica" ,254, "Metallica"],
+		        ['156', "Mew", 312, "Frengers"],
+			    ['Wonderwall', "Oasis", 165, "What's the Story Morning Glory"],
+		        ['Live Forever', "Oasis", 212, "Definately Maybe"],
+		        ['Until it Sleeps', "Metallica" ,254, "Metallica"],
+		        ['156', "Mew", 312, "Frengers"],
+			    ];
+
+				function time(val) {
+				  return (Math.floor(val / 60)) + ':' + val % 60;
+				}
+
+			    // create the data store
+			    var store = new Ext.data.SimpleStore({
+			        fields: [
+			           {name: 'track'},
+			           {name: 'artist'},
+			           {name: 'time', type: 'int'},
+			           {name: 'album'}
+			        ]
+			    });
+			    store.loadData(myData);
+
+			    // create the Grid
+			    var grid = new Ext.grid.GridPanel({
+			        store: store,
+			        columns: [
+			            {id:'track',header: "Track", width: 160, sortable: true, dataIndex: 'track'},
+			            {header: "Artist", width: 75, sortable: true, dataIndex: 'artist'},
+			            {header: "Time", width: 75, sortable: true, renderer: time, dataIndex: 'time'},
+			            {header: "Album", width: 75, sortable: true, dataIndex: 'album'}
+			        ],
+			        stripeRows: true,
+			        autoExpandColumn: 'track',
+			        title:'Search results'
+			    });
+
+			timeSlider = new Ext.Slider({
+				        width: '90%',
+				        minValue: 0,
+				        maxValue: 100
+				    });
+
+			tabs = new Ext.TabPanel({
+	              region:'center',
+	              deferredRender:false,
+	              activeTab:1,
+	              split: true,
+	              items:[
+				{
+	                  title: 'Play queue',
+	                  autoScroll:true,
+	                  html: "empty..."
+	              },
+				    grid, simple
+				  ]
+	          });
+
+	    playButton = new Ext.Button({
+	        text: 'Play',
+	        handler: addTab,
+	    })
+
+		function addTab(){
+			if (playButton.getText() == 'Play')
+				playButton.setText('Pause')
+			else
+				playButton.setText('Play')
+	    }
+
+		
+		var Tree = Ext.tree;
+
+	    var tree = new Tree.TreePanel({
+			border: false,
+		region: 'center',
+	        animate:true,
+	        enableDD:false,
+		loader: new Tree.TreeLoader(), // Note: no dataurl, register a TreeLoader to make use of createNode()
+		lines: true,
+		selModel: new Ext.tree.MultiSelectionModel(),
+	        containerScroll: false
+	    });
+
+	    // set the root node
+	    var root = new Tree.TreeNode({
+	        text: 'Playlists',
+	        draggable:false,
+	        id:'source'
+	    });
+	
+		    tree.setRootNode(root);
+		    // json data describing the tree
+			var json = [
+		{"text" : "New stuff", "id" : 100, "leaf" : false, "cls" : "folder", "children" : [ 
+		    {"text" : "Albums", "id" : 1007, "leaf" : false, "cls" : "folder", "children" : 
+		        [ {"text" : "Oasis - Standing on the Shoulders of Giants", "id" : "100000", "leaf" : true, "cls" : "file"},
+		          {"text" : "I am Droid - Blood & Ether", "id" : "100001", "leaf" : true, "cls" : "file"}
+		        ]
+		    },
+		    {"text" : "Single tracks", "id" : 1007, "leaf" : false, "cls" : "folder", "children" : 
+		        [ {"text" : "Oasis - Standing on the Shoulders of Giants", "id" : "100000", "leaf" : true, "cls" : "file"},
+		          {"text" : "I am Droid - Blood & Ether", "id" : "100001", "leaf" : true, "cls" : "file"}
+		        ]
+		    }]
+		},
+
+		{"text" : "Party", "id" : 1000, "leaf" : false, "cls" : "folder", "children" : [
+		          {"text" : "Metallica - One", "id" : "100002", "leaf" : true, "cls" : "file"},
+		    {"text" : "Dance", "id" : 1001, "leaf" : false, "cls" : "folder", "children" : 
+		        [ {"text" : "Haddaway - What is love", "id" : "100000", "leaf" : true, "cls" : "file"},
+		          {"text" : "2 Unlimited - No Limit", "id" : "100001", "leaf" : true, "cls" : "file"}
+		        ]
+		    },
+		    {"text" : "Indie", "id" : 1002, "leaf" : false, "cls" : "folder", "children" : 
+		        [ {"text" : "Sage - Fuel Economy", "id" : "100000", "leaf" : true, "cls" : "file"}
+		        ]
+		    },
+		]
+		}
+		];
+
+		    for(var i = 0, len = json.length; i < len; i++) {
+		        root.appendChild(tree.getLoader().createNode(json[i]));
+		    }
+	
+tb = new Ext.Toolbar({			
+	        region: 'south', items: [
+			{
+		        text: 'Prev',
+		    },
+			{
+		        text: 'Play',
+		        enableToggle: true,
+		        //toggleHandler: onItemToggle,
+		    },
+			{
+		        text: 'Next',
+		    }, timeSlider,
+		]
+		});
+		
+
+
+
+
+		  var viewport = new Ext.Viewport({
+		    layout: 'border',
+		    items:[
+		      {
+		        region: 'north',
+			    border: false,
+				tbar: [
+		            'Search: ', ' ',
+		            new Ext.app.SearchField({
+		                width:320
+		            })],
+		      },
+		      {
+		        region: 'west',
+	            width: 172,
+	            split: true,
+				layout: 'border',
+				items:[
+				tree,
+		{
+			          region: 'south',
+					  height: 172,
+	     			  html: '<img src="cover.jpg" width="172" height="172">'
+		          }]
+		      },
+		      tabs, tb,
+		    ]
+		  });
+		});
+
+</script>
+
+</head>
+<body>
+</body>
+</html>

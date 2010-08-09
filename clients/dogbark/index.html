@@ -1,0 +1,101 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Dogvibes</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="icon" type="image/png" href="img/favicon.png" />
+<link rel="stylesheet" type="text/css" media="all" href="res/css/style.css" />
+<script type="text/javascript" src='res/js/jquery-1.4.2.min.js'></script>
+<script type="text/javascript" src='res/js/jquery.scrollTo.js'></script>
+<script type="text/javascript" src='res/js/jquery.jsonp.min.js'></script>
+<script type="text/javascript" src='res/js/jquery.growl.js'></script>
+
+<script type="text/javascript" src='res/js/dogvibes-core.js'></script>	
+<script type="text/javascript" src='res/js/dogbone-core.js'></script>	
+<script type="text/javascript" src='res/js/dogbone-modules.js'></script>
+
+<script type="text/javascript" src="res/js/swfobject.js"></script>
+<script type="text/javascript" src="res/js/FABridge.js"></script>
+<script type="text/javascript" src="res/js/web_socket.js"></script>
+<script type="text/javascript">
+    // Set URL of your WebSocketMain.swf here:
+    WEB_SOCKET_SWF_LOCATION = "WebSocketMain.swf";
+    // Set this to dump debug message from Flash to console.log:
+    WEB_SOCKET_DEBUG = true;
+</script>
+</head>
+
+<body>
+<!-- Top //-->
+<div id="top">
+  <div class="inner">
+  <h1>Dogvibes</h1>
+  <div id="User-votes"></div>
+  </div>
+</div>
+
+<!-- Popup and shade //-->
+<div id="shade"></div>
+<div id="popup" class="box">
+  <div class="loading">Sit tight...</div>
+</div>
+
+<!-- Main content //-->
+<div id="toolbar">
+  <h2 id="Dogvibes-info"></h2>
+  <div id="input-frame">
+    <input type="button" value="switch" id="Button-switch"/>
+  </div>
+</div>
+<div id="viewport">
+<div id="content">
+<div id="leftcol" class="column">
+  <h2>What's happening</h2>
+  <div class="inner-col">
+  <ul id="Activity-list">
+    <li class="first last">&nbsp;</li>
+  </ul>
+  </div>
+</div>
+<div id="midcol" class="column">
+  <ul id="tabs">
+    <li class="selected">Queue</li>
+    <li>My votes</li>
+    <li>History</li>
+  </ul>
+  <div class="clear"></div>
+  <div class="box">
+  <div id="Playqueue-info"></div>
+  <ul id="tracks">
+    <li class="first last">&nbsp;</li>
+  </ul>
+  </div>
+</div>
+<div id="rightcol" class="column">
+  <h2>Search</h2>
+  <form id="Search-form" action="">
+  <div>
+    <input type="text" id="Search-input" class="field"/>
+    <input type="submit" class="button" />
+  </div>
+  </form>
+  <div id="pages" class="inner-col">
+    <div id="artist">
+    </div>
+    
+    <div id="album">
+    </div> 
+    <div id="search"> 
+      <!-- Template for search content //-->
+      <ul id="Search-content">
+        <li class="first last">&nbsp;</li>
+      </ul> 
+      <div id="Search-info"></div>
+  </div>
+  </div>
+</div>
+</div>
+</div>
+</body>
+
+</html>

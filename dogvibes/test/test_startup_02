@@ -1,0 +1,35 @@
+#!/bin/bash
+
+host=$1
+user=$2
+
+function amp {
+  echo "============================================="
+  call=http://$host:8080/$user/amp/0/$1
+  echo $call
+  curl $call
+  echo
+}
+
+function dogvibes {
+  echo "============================================="
+  call=http://$host:8080/$user/dogvibes/$1
+  echo $call
+  curl $call
+  echo
+}
+
+# Short 0:06 clips. Testing end of track
+
+amp "connectSpeaker?nbr=0"
+
+amp "queue?uri=spotify://spotify:track:4WEGlZJfIOHVVxqwofJgJL"
+amp "queue?uri=spotify://spotify:track:4HukKiwLsI0Vc2LdXyp2sk"
+amp "queue?uri=spotify://spotify:track:4WEGlZJfIOHVVxqwofJgJL"
+amp "queue?uri=spotify://spotify:track:4HukKiwLsI0Vc2LdXyp2sk"
+
+amp "play"
+
+echo "Playing and exiting test"
+
+

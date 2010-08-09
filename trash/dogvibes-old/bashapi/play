@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# send request to dogvibes daemon
+#./connectspeaker 0
+
+dbus-send --print-reply --system --dest=com.Dogvibes /com/dogvibes/amp/0 com.Dogvibes.Amp.Queue string:'spotify:track:75UqWU4Y0YdCB9MrnKZZnC'
+dbus-send --print-reply --system --dest=com.Dogvibes /com/dogvibes/amp/0 com.Dogvibes.Amp.Queue string:'spotify:track:3odhGRfxHMVIwtNtc4BOZk'
+dbus-send --print-reply --system --dest=com.Dogvibes /com/dogvibes/amp/0 com.Dogvibes.Amp.Queue string:'spotify:track:3Qvf812dY5JVlaZEbzI3nZ'
+dbus-send --print-reply --system --dest=com.Dogvibes /com/dogvibes/amp/0 com.Dogvibes.Amp.Queue string:'spotify:track:7kXmJwrZGIhDaLT9sNo3ut'
+dbus-send --print-reply --system --dest=com.Dogvibes /com/dogvibes/amp/0 com.Dogvibes.Amp.Queue string:'spotify:track:7rk75X26LwTEE8slwrqMjy'
+dbus-send --print-reply --system --dest=com.Dogvibes /com/dogvibes/amp/0 com.Dogvibes.Amp.Queue string:'spotify:track:5WO8Vzz5hFWBGzJaNI5U5n'
+dbus-send --print-reply --system --dest=com.Dogvibes /com/dogvibes/amp/0 com.Dogvibes.Amp.Queue string:'spotify:track:1RUUeQ3vVQUxo1SBDb9nRS'
+dbus-send --print-reply --system --dest=com.Dogvibes /com/dogvibes/amp/0 com.Dogvibes.Amp.Play

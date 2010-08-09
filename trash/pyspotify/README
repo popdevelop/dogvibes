@@ -1,0 +1,7 @@
+To install bindings
+
+sudo apt-get install python2.6-dev
+python setup.py build
+sudo python setup.py install
+
+Observer: Bindings assume that you have libspotify in /usr/local

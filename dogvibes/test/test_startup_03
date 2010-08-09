@@ -1,0 +1,125 @@
+#!/bin/bash
+
+host=$1
+user=$2
+
+function amp {
+  echo "============================================="
+  call=http://$host:8080/$user/amp/0/$1
+  echo $call
+  curl $call
+  echo
+}
+
+function dogvibes {
+  echo "============================================="
+  call=http://$host:8080/$user/dogvibes/$1
+  echo $call
+  curl $call
+  echo
+}
+
+function dogsleep {
+  echo -n "dogsleep $1 sec..."
+  sleep $1
+  echo "done"
+  echo
+}
+
+echo "Test next on a few songs with different time interval"
+
+amp "connectSpeaker?nbr=0"
+
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+
+echo "Added 5 songs"
+
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+
+echo "Adde 5 more songs"
+
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+
+echo "Adde 5 more songs"
+
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+# add three short clips and let them play..
+amp "queue?uri=spotify://spotify:track:7wdjURh0JytWduFjO00UQk"
+amp "queue?uri=spotify://spotify:track:7wdjURh0JytWduFjO00UQk"
+amp "queue?uri=spotify://spotify:track:7wdjURh0JytWduFjO00UQk"
+
+amp "queue?uri=spotify://spotify:track:6xg3JlGpWrnHXZnTHT3UCt"
+amp "queue?uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+amp "queue?uri=spotify://spotify:track:7wdjURh0JytWduFjO00UQk"
+
+amp "play"
+
+echo "Playing"
+
+dogsleep 1
+amp "nextTrack"
+dogsleep 2
+amp "nextTrack"
+dogsleep 3
+amp "nextTrack"
+dogsleep 4
+amp "nextTrack"
+dogsleep 5
+amp "nextTrack"
+dogsleep 6
+amp "nextTrack"
+dogsleep 7
+amp "nextTrack"
+dogsleep 8
+amp "nextTrack"
+dogsleep 9
+amp "nextTrack"
+dogsleep 10
+amp "nextTrack"
+
+dogsleep 1
+amp "nextTrack"
+dogsleep 1
+amp "nextTrack"
+dogsleep 1
+amp "nextTrack"
+dogsleep 1
+amp "nextTrack"
+dogsleep 1
+amp "nextTrack"
+
+dogsleep 0
+amp "nextTrack"
+dogsleep 0
+amp "nextTrack"
+dogsleep 0
+amp "nextTrack"
+dogsleep 0
+amp "nextTrack"
+dogsleep 0
+amp "nextTrack"
+
+dogsleep 30
+#let the tree songs playu
+dogsleep 3
+amp "nextTrack"
+dogsleep 3
+amp "nextTrack"
+
+echo "Done"

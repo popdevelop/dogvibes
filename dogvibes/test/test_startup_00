@@ -1,0 +1,39 @@
+#!/bin/bash
+
+host=$1
+user=$2
+
+function amp {
+  echo "============================================="
+  call=http://$host:8080/$user/amp/0/$1
+  echo $call
+  curl $call
+  echo
+}
+
+function dogvibes {
+  echo "============================================="
+  call=http://$host:8080/$user/dogvibes/$1
+  echo $call
+  curl $call
+  echo
+}
+
+amp "connectSpeaker?nbr=0"
+amp "queue?uri=spotify://spotify:track:0E4rbyLYVCGLu75H3W6O67"
+amp "play"
+
+echo "Playing for 5 seconds"
+sleep 5
+
+echo "Stopping"
+amp "stop"
+
+echo "Playing for 5 seconds"
+amp "play"
+
+echo "Stopping"
+amp "stop"
+
+amp "disconnectSpeaker?nbr=0"
+sleep 2

@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# set env variables
+RESOURCESPATH=dist/dog.app/Contents/Resources/
+
+# Remove previous builds
+rm -rf dist/ build/
+
+# Build app with all of its gstreamer dependencies
+python2.6 setup.py py2app --framework /opt/local/lib/gstreamer-0.10/libgstspot.so,/opt/local/lib/gstreamer-0.10/libgstcoreelements.so,/opt/local/lib/gstreamer-0.10/libgstaudioconvert.so,/opt/local/lib/gstreamer-0.10/libgstosxaudio.so,/opt/local/lib/gstreamer-0.10/libgstvolume.so,/opt/local/lib/gstreamer-0.10/libgstdecodebin2.so,/opt/local/lib/gstreamer-0.10/libgstplaybin.so
+
+# Copy file with sr radio stations
+cp ../../dogvibes/src/sr.xml $RESOURCESPATH
+
+# Copy configuration file
+cp ../../dogvibes/src/dogvibes.conf $RESOURCESPATH
+
+# Copy spotify app key
+cp ../../dogvibes/src/dogspotkey.key $RESOURCESPATH

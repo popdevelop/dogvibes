@@ -1,0 +1,102 @@
+#!/bin/bash
+
+host=$1
+user=$2
+
+function amp {
+  echo "============================================="
+  call=http://$host:8080/$user/amp/0/$1
+  echo $call
+  curl $call
+  echo
+}
+
+function dogvibes {
+  echo "============================================="
+  call=http://$host:8080/$user/dogvibes/$1
+  echo $call
+  curl $call
+  echo
+}
+
+function dogsleep {
+  echo -n "dogsleep $1 sec..."
+  sleep $1
+  echo "done"
+  echo
+}
+
+echo "Test prev on a few songs with different time interval"
+
+amp "connectSpeaker?nbr=0"
+#Adds 10 first songs from Vivadi 2009, http://open.spotify.com/album/1km2gxSZAAIabVp8isn6xO
+dogvibes "createPlaylist?name=Vivaldi"
+dogvibes "getAllPlaylists"
+
+dogvibes "addTrackToPlaylist?playlist_id=1&uri=spotify://spotify:track:0TzrlYVXQGb5kCK25JBXqS"
+dogvibes "addTrackToPlaylist?playlist_id=1&uri=spotify://spotify:track:0DwnNRCM2r5WM4dh57UA3V"
+dogvibes "addTrackToPlaylist?playlist_id=1&uri=spotify://spotify:track:3JoEE48ZUdFL74WdJsMsYO"
+dogvibes "addTrackToPlaylist?playlist_id=1&uri=spotify://spotify:track:13GSFj7uIxqL9eNItNob3p"
+dogvibes "addTrackToPlaylist?playlist_id=1&uri=spotify://spotify:track:6jyIZtAufT0Qbyp200KRqz"
+
+echo "Added 5 Vivaldi songs"
+
+dogvibes "addTrackToPlaylist?playlist_id=1&uri=spotify://spotify:track:32xwTZyYlaiO7AyEXSepVs"
+dogvibes "addTrackToPlaylist?playlist_id=1&uri=spotify://spotify:track:1O1F0vRllauVmCGhItXxu2"
+dogvibes "addTrackToPlaylist?playlist_id=1&uri=spotify://spotify:track:6cPbVV2I3AjhSHxB5J4Ozd"
+dogvibes "addTrackToPlaylist?playlist_id=1&uri=spotify://spotify:track:05ShrFZEGDlxrzIt7Qo0nU"
+dogvibes "addTrackToPlaylist?playlist_id=1&uri=spotify://spotify:track:24uQzxG85ONf3w2DVeStG3"
+
+echo "Adde 5 Vivaldi  more songs"
+
+dogvibes "addTrackToPlaylist?playlist_id=1&uri=spotify://spotify:track:2ycZ6jD05mCUWYJZHF6Rml"
+
+dogvibes "getAllTracksInPlaylist?playlist_id=1"
+
+amp "playTrack?playlistid=1&nbr=0"
+
+echo "Playing"
+
+dogsleep 8
+amp "nextTrack"
+dogsleep 8
+amp "nextTrack"
+dogsleep 1
+amp "nextTrack"
+dogsleep 1
+amp "nextTrack"
+dogsleep 1
+amp "nextTrack"
+
+dogsleep 1
+amp "nextTrack"
+dogsleep 1
+amp "nextTrack"
+dogsleep 8
+amp "nextTrack"
+dogsleep 8
+amp "nextTrack"
+
+dogsleep 8
+amp "previousTrack"
+dogsleep 8
+amp "previousTrack"
+dogsleep 1
+amp "previousTrack"
+dogsleep 1
+amp "previousTrack"
+dogsleep 1
+amp "previousTrack"
+
+
+dogsleep 1
+amp "previousTrack"
+dogsleep 1
+amp "previousTrack"
+dogsleep 8
+amp "previousTrack"
+dogsleep 8
+amp "previousTrack"
+
+
+echo "Done"

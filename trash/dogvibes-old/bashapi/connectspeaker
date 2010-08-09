@@ -1,0 +1,2 @@
+#!/bin/sh
+dbus-send --print-reply --system --dest=com.Dogvibes /com/dogvibes/amp/0 com.Dogvibes.Amp.ConnectSpeaker int32:$1

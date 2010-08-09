@@ -1,0 +1,744 @@
+/******************************************************************************
+ * Basic styles
+ *****************************************************************************/
+
+*:focus {outline: none;}
+
+html {
+  background-color: #DDD;
+  background-image: url("../img/background2.png");
+}
+
+body {
+  background-image: url("../img/top-shadow.png");
+  background-position: 0 49px; 
+  background-repeat: repeat-x; 
+  margin: auto;
+  padding: 0;
+  font-family: helvetica, arial, sans-serif;
+  text-shadow: rgba(255,255,255, 0.8) 0 1px 0;  
+}
+
+.column {
+  display: inline-block;
+  float: left;
+  padding: 0;
+  margin: 0;
+}
+
+div.box {
+  background-color: #FFF;
+  border-radius: 5px;
+  margin: 10px 10px 14px 10px;
+  -moz-border-radius: 5px;
+  -webkit-border-radius: 5px; 
+  box-shadow: #C8C8C8 0px 4px 18px;
+  -webkit-box-shadow: #C8C8C8 0px 4px 18px;
+  -moz-box-shadow: #C8C8C8 0px 4px 18px; 
+}
+
+.inner-col {
+  padding: 10px;
+}
+
+.hidden {
+  display: none;
+}
+
+
+.gradient {
+	/* Legacy browsers */
+	background: #e4e4e4;
+	-o-background-size: 100% 100%;
+	-moz-background-size: 100% 100%;
+	-webkit-background-size: 100% 100%;
+	background-size: 100% 100%;
+	/* Recent browsers */
+	background: -moz-linear-gradient(
+		top,
+		#f5f5f5,
+		#e4e4e4
+	);
+	background: -webkit-gradient(
+		linear,
+		left top, left bottom,
+		from(#f5f5f5),
+		to(#e4e4e4)
+	);
+}
+
+div.inner {
+  width: 950px;
+  margin: auto;
+}
+
+/* http://sonspring.com/journal/clearing-floats */
+
+.clear {
+	clear: both;
+	display: block;
+	overflow: hidden;
+	visibility: hidden;
+	width: 0;
+	height: 0;
+  
+}
+
+em {
+  font-style: normal;
+}
+
+a, a:visited, a:link {
+  color: #4A89AD;
+  text-decoration: none;
+}
+a:hover {
+  color: firebrick;  
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style-type:none;
+}
+
+h1, h2, h3, h4, h5 {
+  font-weight: bold;
+  font-family: helvetica, arial, sans-serif;
+  margin: 0;
+}
+
+h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  text-shadow: rgba(255,255,255, 0.8) 0 1px 0;
+  color: #707171;
+  height: 20px;  
+}
+
+li {
+  border-top: 1px solid #eee;
+  border-bottom: 1px solid #d9d9d9;
+}
+
+li.last {
+  border-bottom: 0;
+  border-bottom-right-radius: 5px;
+  -moz-border-bottom-right-radius: 5px;
+  -webkit-border-bottom-right-radius: 5px;  
+  
+  border-bottom-left-radius: 5px;
+  -moz-border-bottom-left-radius: 5px;
+  -webkit-border-bottom-left-radius: 5px;  
+}
+
+li.first {
+  border-top: 0;
+  
+  border-top-right-radius: 5px;
+  -moz-border-top-right-radius: 5px;
+  -webkit-border-top-right-radius: 5px;  
+  
+  border-top-left-radius: 5px;
+  -moz-border-top-left-radius: 5px;
+  -webkit-border-top-left-radius: 5px;  
+}
+
+/*--- Vote button ---*/
+
+li input.voteButton {
+  background-color: transparent;
+  background-image: url('../img/vote-normal.png');
+  background-position: right top;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  height: 22px;
+  width: 54px;
+  text-indent: -999px; 
+  margin: 0;
+  padding: 0;
+  border: 0;   
+}
+
+li input.voteButton:hover {
+  background-image: url('../img/vote-hover.png');
+}
+
+li input.voteButton.undo {
+  background-image: url('../img/vote-undo.png');
+}
+
+li input.voteButton.undo:hover {
+  background-image: url('../img/vote-undo.png');
+}
+
+li input.voteButton.voting,
+li input.voteButton.voting:hover {
+  background-image: url('../img/loading.gif');
+  background-position: 50% 50%;  
+}
+
+div.loading {
+  background-image: url('../img/loading.gif');
+  background-repeat: no-repeat;
+  background-position: 50% 50%;
+  min-height: 100px;
+}
+
+#popup {
+  width: 320px;
+  height: 140px;
+  position: absolute;
+  margin-left: -190px;
+  left: 50%;
+  top: 100px;
+  padding: 30px;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 18px;
+  background-color: #FFF;
+  z-index: 200;
+}
+
+#popup .loading {
+  padding-bottom: 30px;
+}
+
+#shade {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  background-color: #eee;
+  background-image: url("../img/background2.png");
+}
+
+/******************************************************************************
+ * Top
+ *****************************************************************************/
+
+#top {
+  width: 100%;
+  height: 49px;
+  background-image: url("../img/top.png");
+  background-repeat: repeat-x;
+  border-bottom: 1px solid #eee;
+}
+
+#top h1 {
+  display: inline-block;
+  height: 28px;
+  width: 117px;
+  margin: 11px 0 0 14px;
+  font-size: 30px;
+  font-weight: normal;
+  color: #999;
+  text-indent: -999px;
+  background-image: url("../img/dogvibes.png");
+  background-position: top left;  
+}
+
+#top #User-votes {
+  margin-top: 20px;
+  color: #909191;
+  font-size: 12px;
+  float: right;
+}
+
+#top #User-votes .user {
+  color: #4A89AD;
+  font-weight: bold;
+}
+
+#toolbar {
+  width: 950px;
+  margin: 20px auto 10px auto;  
+}
+
+#toolbar h2 {
+  display: inline;
+  font-size: 60px;
+  font-weight: bold;
+  font-family: helvetica, arial, sans-serif;
+  letter-spacing: -3px;
+  color: #fff;
+  text-shadow: rgba(0,0,0, 0.2) 1px 1px 0;
+  text-transform: lowercase;
+  margin-left: 10px;
+}
+
+#toolbar #input-frame {
+  float: right;
+  background-image: url("../img/toggle.png");
+  background-position: top right;
+  border: 0;
+  width: 199px;
+  height: 47px;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  right: -7px;
+  top: 20px;
+}
+
+#toolbar #input-frame:hover {
+  background-image: url('../img/toggle-hover.png');
+}
+
+#toolbar #input-frame input{
+  background-color: transparent;
+  border: 0;
+  width: 199px;
+  height: 47px;
+  margin: 0;
+  padding: 0;
+  text-indent: -999px;
+  background-image: url('../img/toggle-add.png');
+  background-position: 50% 50%;
+  cursor: pointer;
+}
+
+#toolbar #input-frame input.social {
+  background-image: url('../img/toggle-social.png');
+  background-position: 50% 50%;  
+}
+
+#viewport {
+  margin: auto;
+  width: 950px;
+  padding: 0 10px;
+  overflow: hidden;
+}
+
+#content {
+  width: 1490px;
+}
+
+/******************************************************************************
+ * Left, notification column
+ *****************************************************************************/
+ 
+#leftcol {
+  font-size: 12px;
+  width: 530px;
+}
+
+#leftcol h2 {
+  background-image: url('../img/hr.png');
+  background-position: left bottom;
+  background-repeat: repeat-x;   
+  height: 20px;
+  margin: 0 10px;
+  color: #707171;
+  font-size: 12px;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+#leftcol img {
+  margin: 0 10px 0 0;
+  border: 0;
+  background-color: #FFF;
+  width: 30px;
+  height: 30px;
+  float: left;
+  position: relative;
+  top: 0px;
+  border: 1px solid #BBB;
+  padding: 1px;  
+} 
+
+#leftcol ul {
+  margin-top: 0px;
+}
+ 
+#leftcol ul li {
+  color: #999;
+  min-height: 40px;
+  padding-top: 4px;
+  position: relative;
+  background-image: none;
+}
+
+#leftcol ul li span {
+  color: #7e7e7e;
+}
+
+#leftcol ul li span.weak {
+  font-size: 12px;
+  color: #AAA;
+  margin: 0 2px;
+}
+
+#leftcol ul li span.user {
+  font-size: 14px;
+  color: #4A89AD;
+  font-weight: bold;
+}
+
+#leftcol ul li span.time {
+  font-size: 11px;
+  color: #AAA;
+  margin: 3px 0 0 0;
+  display: block;
+}
+
+#leftcol ul li input {
+  position: absolute;
+  right: 10px;
+  bottom: 5px;
+}
+
+/******************************************************************************
+ * Middle, status column
+ *****************************************************************************/
+ 
+#midcol {
+  width: 430px;
+}
+
+#midcol ul#tabs {
+  background-image: url('../img/hr.png');
+  background-position: left bottom;
+  background-repeat: repeat-x;   
+  height: 20px;
+  padding: 0;
+  margin: 0 10px;
+}
+
+#midcol ul#tabs li{
+  color: #5992B3;
+  display: inline-block;
+  float: left;
+  font-size: 12px;
+  font-weight: bold;
+  font-family: helvetica, arial, sans-serif;
+  text-transform: uppercase;
+  margin: 0 25px 0 0;
+  padding: 0;
+  border: 0;
+  background-image: none;
+}
+
+#midcol ul#tabs li.selected{
+  color: #707171;
+  padding: 0;
+}
+
+/*--- Track list ---*/
+#midcol ul#tracks {
+  clear: both;
+}
+
+#midcol ul#tracks li {
+  margin: 0;
+  padding: 10px;
+  min-height: 50px;
+  position: relative;
+  border-top: 1px solid #fff;  
+}
+
+#midcol ul#tracks li.noTracks { 
+  text-align: center;
+  padding: 40px 0;
+  color: #909191;
+}
+
+
+#midcol ul#tracks li div.trackText {
+  height: 17px;
+  display: block;
+  overflow: hidden;
+}
+
+#midcol ul#tracks li span {
+  display: inline-block;
+  height: 17px;
+  overflow: hidden;
+  color: #4a4a4a;
+  font-size: 12px;
+}
+
+#midcol ul#tracks li span.weak {
+  color: #909191;
+  font-size: 10px;
+  margin: 0 2px;
+}
+
+#midcol ul#tracks li.playing {
+  min-height: 154px;
+  border-top: 0;
+}
+
+#midcol ul#tracks li.playing h3 {
+  text-indent: -999px;
+  position: absolute;
+  top: 5px;
+  left: -13px;
+  height: 34px;
+  width: 135px;
+  background-image: url("../img/nowplaying.png");
+  background-position: top left;  
+}
+
+#midcol ul#tracks li.playing em {
+  height: auto;
+  display: block;
+  color: #4a4a4a;
+  font-style: normal;
+  font-weight: bold;
+  font-size: 18px;
+}
+#midcol ul#tracks li.playing span {
+  display: block;
+  color: #929191;
+  margin: 3px 0;
+  font-weight: normal;
+  font-size: 14px;
+  cursor: pointer;  
+}
+
+#midcol ul#tracks li.playing span.album {
+  display: block;
+  font-weight: normal;
+  font-size: 12px;
+  cursor: pointer;  
+}
+
+#midcol ul#tracks li.playing ul.votes {
+  position: absolute;
+  bottom: 10px;
+  left: 160px;
+}
+
+#midcol ul#tracks li.playing div#playIndicator {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+}
+
+#midcol ul#tracks li.playing div#playIndicator.playing {
+  background-image: url("../img/icon_eq.gif")
+}
+
+/*--- Album art ---*/
+#midcol ul#tracks li img {
+  width: 48px;
+  height: 48px;
+  float: left;
+  margin-right: 10px;
+  border: 1px solid #BBB;
+  padding: 1px;
+}
+
+#midcol ul#tracks li.playing img {
+  margin-right: 10px;
+  width: 140px;
+  height: 140px;
+  padding: 5px;
+  background-color: #fff;
+}
+
+/*---  ---*/
+
+#midcol ul#tracks li input {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+}
+
+/*--- Votes ---*/
+#midcol ul#tracks ul.votes {
+  margin-top: 3px;
+}
+
+#midcol ul#tracks li.playing ul.votes {
+  margin-left: 10px;
+}
+
+#midcol ul#tracks ul.votes li {
+  margin: 0 3px;
+  border: 0;
+  padding: 0;
+  min-height: 29px;
+  height: 29px;
+  width: 29px;
+  display: inline-block;
+  float: left;
+  overflow: hidden;
+  background-image: none;
+}
+
+#midcol ul#tracks ul.votes li.sum {
+  border: 0;
+  padding: 3px;
+  width: auto;
+  color: #BBB;
+  font-size: 14px;  
+}
+
+#midcol ul#tracks ul.votes li img { 
+  width: 25px;
+  height: 25px;
+  padding: 1px;
+}
+
+
+/******************************************************************************
+ * Middle, status column
+ *****************************************************************************/
+
+#rightcol {
+  width: 530px;
+  position: relative;
+}
+
+#rightcol input#Search-input {
+  float: left;
+  font-size: 16px;
+  color: #555;
+  margin: 0 0 0 10px;
+  height: 36px;
+  width: 415px;
+  border: 0;
+  padding: 0 10px;
+  background-color: transparent;
+  background-image: url('../img/searchbox.png');
+  background-position: left top;
+  background-repeat: no-repeat;   
+}
+
+#rightcol input.button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: inline-block;
+  background-color: transparent;
+  background-image: url('../img/searchbox.png');
+  background-position: right top;
+  background-repeat: no-repeat;
+  text-indent: -999px;
+  height: 36px;
+  width: 75px;
+  cursor:pointer;
+}
+
+#rightcol ul#Search-content li {
+  font-size: 12px;
+  min-height: 16px;
+  padding: 5px 10px;
+  position: relative;
+  width: 490px;
+}
+
+#rightcol ul#Search-content li span {
+  color: #909191;
+  display: inline-block;
+  margin: 0 5px 2px 0;
+  font-size: 11px;
+  cursor: default; 
+}
+
+#rightcol ul#Search-content li span.title {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+#rightcol ul#Search-content li input {
+  display: inline-block;
+  position: absolute;
+  right: 0;
+  top: 1px;
+}
+
+#rightcol ul#Search-content li input.undo,
+#rightcol ul#Search-content li input.undo:hover {
+  background-image: url('../img/vote-undo.png');
+}
+
+#rightcol h2 {
+  background-image: url('../img/hr.png');
+  background-position: left bottom;
+  background-repeat: repeat-x; 
+  margin: 0 10px 7px 10px;
+}
+#rightcol table {
+  width: 100%;
+  border-collapse: collapse;
+}
+ 
+#rightcol table thead th {
+  font-weight: normal;
+  text-align: left;
+}
+
+#rightcol table tbody td {
+  font-weight: normal;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 2px 0;
+  cursor: default;
+}
+
+#rightcol table tbody td input {
+  font-weight: normal;
+  font-size: 10px;
+  margin: 0;
+  visibility: hidden;
+}
+
+#rightcol table tbody tr:hover {
+  background-color: #DDD;
+}
+
+#rightcol table tbody tr:hover input {
+  visibility: visible;
+}
+
+
+/******************************************************************************
+ * Artist
+ *****************************************************************************/
+
+#artist img, #album img {
+  width: 100px;
+  float: left;
+  display: inline;
+  margin-right: 10px;
+}
+
+#artist h4, #album h4 {
+  margin: 10px 0 10px 0;
+}
+#artist h5, #album h5 {
+  margin-left: 120px;
+}
+#artist table, #album table {
+  width: 390px;
+  margin-left: 120px;
+  min-height: 100px;
+}
+table tbody td {
+  padding-right: 4px;
+}
+
+table thead {
+  background-color: #AAA;
+  color: #FFF;
+  font-weight: normal;
+  font-size: 11px;
+}
+
+.AlbumEntry {
+  position: relative;
+  display: block;
+  clear: both;
+  min-height: 130px;
+  height: auto;
+  margin-left: 10px;
+}

@@ -1,0 +1,2 @@
+#!/bin/sh
+dbus-send --print-reply --system --dest=com.Dogvibes /com/dogvibes/dogvibes com.Dogvibes.Dogvibes.Search string:'Bob Dylan'

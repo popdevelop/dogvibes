@@ -1,0 +1,117 @@
+ul, li {
+  margin: 0;
+  padding: 0;
+  display: inline-block;
+  float: left;
+}
+
+#top {
+  z-index: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+}
+
+#leftcol {
+  z-index: 1;
+  position: fixed;
+  top: 56px;
+  left: 0px;
+  bottom: 41px;
+  width: 180px;
+  overflow: hidden;
+}
+
+#leftcol #navigation {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 232px;
+  width: 100%;
+  overflow: auto;
+}
+
+#leftcol #navigation ul, #leftcol #navigation li {
+  display: block;
+  float: none;
+}
+
+#leftcol #navigation.fullHeight {
+  bottom: 52px;
+}
+
+#leftcol #currentsong {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  bottom: 0;
+  height: 232px;
+}
+
+#leftcol #currentsong.minimized {
+  height: 52px;
+}
+
+#leftcol #trackinfo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+}
+
+#separator {
+  z-index: 1;
+  position: fixed;
+  top: 56px;
+  left: 180px;
+  bottom: 41px;
+  width: 1px;
+  z-index: 8000;
+}
+
+#rightcol {
+  z-index: 2;
+  position: fixed;
+  top: 56px;
+  left: 181px;
+  bottom: 41px;
+  right: 0;
+  overflow: hidden;
+}
+
+#rightcol #titlebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 22px;
+}
+
+#rightcol #content {
+  position: absolute;
+  top:22px;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  overflow: auto;
+}
+
+#rightcol #content > div { 
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+#bottom {
+  z-index: 0;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 41px;
+}
