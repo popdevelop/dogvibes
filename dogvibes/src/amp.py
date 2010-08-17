@@ -10,6 +10,7 @@ from models import Track
 from models import Playlist
 from models import Entry
 from models import User
+from models import Vote
 
 class DogError(Exception):
     def __init__(self, value):
@@ -198,6 +199,7 @@ class Amp():
             self.next_track()
             #request.push({'state': self.get_state()})
             #request.push(self.track_to_client())
+            self.vote_version += 1
             self.needs_push_update = True
             # TODO: is this enough? An update is pushed to the clients
             # but will the info be correct?
@@ -249,6 +251,9 @@ class Amp():
             return 'paused'
 
     def set_state(self, state):
+        if self.src == None:
+            # FIXME return something sweet
+            return
         logging.debug("set state try: "+str(state))
         res = self.pipeline.set_state(state)
         if res != gst.STATE_CHANGE_FAILURE:
@@ -289,6 +294,7 @@ class Amp():
                 return Entry.objects.get(id=self.active_playlists_track_id).track
             except:
                 logging.debug("...but failed")
+                self.active_playlists_track_id = -1
                 return None
         else:
             # Try the first active_play_list id
@@ -482,35 +488,41 @@ class Amp():
             request.push({'state': self.get_state()})
             request.finish()
 
-    #def API_queue(self, uri, position, request): update when clients are ready...
     def API_addVote(self, uri, request):
+        #self.tick_version()
+        user = User.objects.get(username=request.user)
         track = self.dogvibes.create_track_from_uri(uri)
         playlist = Playlist.objects.get(id=self.tmpqueue_id)
 
-        playlist.add_vote(track, request.user, request.avatar_url)
+        matching_tracks = playlist.tracks.filter(uri=uri)
+        if not matching_tracks:
+            track = self.dogvibes.create_track_from_uri(uri)
+            entry = Entry.objects.create(track=track, playlist=playlist)
+        else:
+            entry = matching_tracks[len(matching_tracks)-1].entry_set.get()
 
         if user.votes_left() < 1:
             logging.debug("No more votes left for %s" % user.username)
             return
 
-#        if user.already_voted(track)
-#            logging.debug("%s already voted for track, ignoring" % user.username)
-#            return
-#
-#                if self.has_track(self.id, track_id):
-#            #UPVOTE TRACK
-#            logging.debug("Upvote track_id = %s" % track_id)
-#            playlist_id = self.id
-#            db = Database()
-#            db.commit_statement('''select * from playlist_tracks where playlist_id = ? AND track_id = ? LIMIT 1''', [playlist_id, track_id])
-#            row = db.fetchone()
-#            pos = row['position']
-#            votes = row['votes']
-#
-#            # we dont want to move pass the playing track
-#            if pos <= 2:
-#                logging.debug("no need to move, at position = %s" % pos)
-#            else:
+        if user.already_voted(track):
+            logging.debug("%s already voted for track, ignoring" % user.username)
+            return
+        #import pdb; pdb.set_trace()
+
+        # This is the actual voting
+        Vote.objects.create(entry=entry, user=user)
+
+#        nbr_votes = entry
+
+ #       entry.insert_at
+
+#        new_pos = playlist.entry_set.filter(vote_set__count<=entry.vote_set.count()).latest()
+
+        # Don't move pass the playing track
+#        if entry.position <= 1:
+#            logging.debug("No need to move, at position %s" % entry.position)
+#        else:
 #                # find all with same amount of votes, and move pass them
 #                db.commit_statement('''select min(position) as new_pos,* from playlist_tracks where playlist_id = ? AND votes = ? AND position > 1''', [playlist_id, votes])
 #                # update votes

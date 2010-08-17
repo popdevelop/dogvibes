@@ -130,11 +130,13 @@ class TwitterHandler(tornado.web.RequestHandler,
                      tornado.auth.TwitterMixin):
     @tornado.web.asynchronous
     def get(self, username):
-        if username != "twitter": # don't assign if it's Twitter on the door
-            self.set_cookie("username", username)
         if self.get_argument("oauth_token", None):
             self.get_authenticated_user(self.async_callback(self._on_auth))
             return
+        referer = self.request.headers.get('Referer', None)
+        self.clear_cookie("referer")
+        if referer and "api.twitter.com" not in referer:
+            self.set_cookie("referer", referer)
         self.authorize_redirect()
 
     def _on_auth(self, user):
@@ -143,7 +145,12 @@ class TwitterHandler(tornado.web.RequestHandler,
         logging.info("@%s authorized" % user["username"])
         self.set_secure_cookie("twitter_name", user["username"])
         self.set_secure_cookie("twitter_avatar", user["profile_image_url"])
-        self.redirect("http://dogvibes.com/" + self.get_cookie("username"))
+        referer = self.get_cookie("referer")
+        if referer:
+            self.redirect(self.get_cookie("referer"))
+        else:
+            self.write("Congratulations, @%s is now authorized" % user["username"])
+            self.finish()
 
 nbr = 0
 def assign_nbr():

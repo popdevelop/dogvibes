@@ -175,6 +175,13 @@ class HTTPConnection(object):
             self.stream.read_bytes(content_length, self._on_request_body)
             return
 
+        if 'Sec-WebSocket-Key1' in data:
+            self.stream.read_bytes(8, self._on_key)
+        else:
+            self.request_callback(self._request)
+
+    def _on_key(self, data):
+        self._request.key3 = data
         self.request_callback(self._request)
 
     def _on_request_body(self, data):

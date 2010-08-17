@@ -29,10 +29,10 @@ class User(models.Model):
     username = models.CharField()
     avatar_url = models.CharField()
 
-    def votes_left():
+    def votes_left(self):
         return 5 - User.objects.get(id=self.id).vote_set.all().count()
 
-    def already_voted():
+    def already_voted(self, track):
         return False
 
     def __unicode__(self):
@@ -58,11 +58,13 @@ class Playlist(models.Model):
 class Entry(PositionalSortMixIn, models.Model):
     playlist = models.ForeignKey(Playlist)
     track = models.ForeignKey(Track)
+    timestamp = models.DateField(auto_now_add=True)
     def __unicode__(self):
         return self.playlist.name + ": " + self.track.title + " ("+str(self.position)+")"
     class Meta:
         db_table = 'entry'
         app_label = "myapp"
+        get_latest_by = 'timestamp'
 
 
 class Vote(models.Model):

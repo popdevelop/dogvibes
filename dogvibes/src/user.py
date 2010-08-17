@@ -115,12 +115,18 @@ class User:
         db = Database()
         db.commit_statement('''select * from votes where track_id = ?''', [track_id])
         
-        logging.debug("Give votes back to all users who voted for removed track")
+        logging.debug("Give votes back to all users who voted for removed track %s" % track_id)
 
+        user_ids = []
         row = db.fetchone()
         while row != None:
+            user_ids.append(row['user_id'])
+            row = db.fetchone()
+        
+        for id in user_ids:
+            logging.debug("%s voted for track %s now got one vote back" % (id, track_id))
             # give vote back to user
-            db.commit_statement('''update users set votes = votes + 1 where id = ?''', [row['user_id']])
+            db.commit_statement('''update users set votes = votes + 1 where id = ?''', [id])
             row = db.fetchone()
 
         db.commit_statement('''delete from votes where track_id = ?''', [track_id])

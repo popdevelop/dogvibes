@@ -150,6 +150,25 @@ class SpotifySource:
             self.spotify.connect('play-token-lost', self.play_token_lost)
         return self.bin
 
+
+    def uglyfind(self, obj, findstr):
+        try:
+            saveto = obj.find(findstr).text
+        except:
+            saveto = "NA"
+
+        return saveto
+
+
+    def uglyfindattr(self, obj, findstr):
+        try:
+            saveto = obj.find(findstr).attrib['href']
+        except:
+            saveto = "NA"
+
+        return saveto
+
+
     def search(self, query):
         tracks = []
 
@@ -166,17 +185,19 @@ class SpotifySource:
         ns = "http://www.spotify.com/ns/music/1"
 
         for e in tree.findall('.//{%s}track' % ns):
-            title = e.find('.//{%s}name' % ns).text
-            artist = e.find('.//{%s}artist/{%s}name' % (ns, ns)).text
-            album = e.find('.//{%s}album/{%s}name' % (ns, ns)).text
-            album_uri = "spotify://" + e.find('.//{%s}album' % ns).attrib['href']
-            duration = int(float(e.find('.//{%s}length' % ns).text) * 1000)
+            title = self.uglyfind(e, './/{%s}name' % ns)
+            artist = self.uglyfind(e, './/{%s}artist/{%s}name' % (ns, ns))
+            album = self.uglyfind(e, './/{%s}album/{%s}name' % (ns, ns))
+            album_uri = "spotify://" + self.uglyfindattr(e, './/{%s}album' % ns)
+            duration = int(float(self.uglyfind(e, './/{%s}length' % ns)) * 1000)
             uri = "spotify://" + e.items()[0][1]
-            popularity = float(e.find('.//{%s}popularity' % ns).text)
-            territories = e.find('.//{%s}album/{%s}availability/{%s}territories' % (ns, ns, ns)).text
-            track = Track(uri=uri, title=title, artist=artist, album=album,
-                          album_uri=album_uri, duration=duration, popularity=popularity)
-            if 'SE' in territories or territories == 'worldwide':
+            popularity = self.uglyfind(e, './/{%s}popularity' % ns)
+            territories = self.uglyfind(e, './/{%s}album/{%s}availability/{%s}territories' % (ns, ns, ns))
+            # TODO: Should the track be added or removed when territories isn't present.
+            # Removing just in case...
+            if territories and ('SE' in territories or territories == 'worldwide'):
+                track = Track(uri=uri, title=title, artist=artist, album=album,
+                              album_uri=album_uri, duration=duration, popularity=popularity)
                 tracks.append(track)
 
         return tracks

@@ -65,7 +65,6 @@ class AlbumArt():
         album = re.sub(' ', '+', album)
 
         url = url_template % (api_key, artist, album)
-        print url
         fd = urllib.urlopen(url)
         self.http_client.fetch(url, self.xml_callback)
 
@@ -104,11 +103,12 @@ class AlbumArt():
                 img = Image.open(buf)
             except:
                 logging.warning("Could not read image: %s" % self.img_path)
+                self.callback(self.get_standard_image())
                 return None
 
             # Won't grow the image since I couldn't get .resize() to work
             size = 150
-            img.resize((size, size), Image.ANTIALIAS)
+            img.thumbnail((size, size), Image.ANTIALIAS)
 
             # Need to create new buffer, otherwise changes won't take effect
             out_buf = StringIO.StringIO()
@@ -121,4 +121,4 @@ class AlbumArt():
 #            f.write(response.body)
             f.write(img_data)
             f.close()
-            self.callback(response.body)
+            self.callback(img_data)

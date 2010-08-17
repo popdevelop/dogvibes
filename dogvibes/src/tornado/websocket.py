@@ -18,6 +18,9 @@ import functools
 import logging
 import tornado.escape
 import tornado.web
+import re
+import hashlib
+import struct
 
 class WebSocketHandler(tornado.web.RequestHandler):
     """A request handler for HTML 5 Web Sockets.
@@ -69,14 +72,32 @@ class WebSocketHandler(tornado.web.RequestHandler):
                 "HTTP/1.1 403 Forbidden\r\nContent-Length: " +
                 str(len(message)) + "\r\n\r\n" + message)
             return
-        self.stream.write(
-            "HTTP/1.1 101 Web Socket Protocol Handshake\r\n"
-            "Upgrade: WebSocket\r\n"
-            "Connection: Upgrade\r\n"
-            "Server: TornadoServer/0.1\r\n"
-            "WebSocket-Origin: " + self.request.headers["Origin"] + "\r\n"
-            "WebSocket-Location: ws://" + self.request.host +
-            self.request.path + "\r\n\r\n")
+
+        if self.request.headers.get("Sec-Websocket-Key1", None) != None:
+            keys = []
+            for key in [1, 2]:
+                key = self.request.headers.get("Sec-Websocket-Key%d" % key, "")
+                numbers = int("".join(re.findall("[0-9]", key)))
+                spaces = len(re.findall(" ", key))
+                keys.append(numbers / spaces)
+            sum = struct.pack(">II", keys[0], keys[1]) + self.request.key3
+            result = hashlib.md5(sum).digest()
+            self.stream.write(
+                "HTTP/1.1 101 WebSocket Protocol Handshake\r\n"
+                "Upgrade: WebSocket\r\n"
+                "Connection: Upgrade\r\n"
+                "Sec-WebSocket-Origin: " + self.request.headers["Origin"] + "\r\n"
+                "Sec-WebSocket-Protocol: " + self.request.headers.get("Sec-WebSocket-Protocol", "default") + "\r\n"
+                "Sec-WebSocket-Location: ws://" + self.request.host + self.request.path + "\r\n\r\n" + result)
+        else:
+            self.stream.write(
+                "HTTP/1.1 101 Web Socket Protocol Handshake\r\n"
+                "Upgrade: WebSocket\r\n"
+                "Connection: Upgrade\r\n"
+                "Server: TornadoServer/0.1\r\n"
+                "WebSocket-Origin: " + self.request.headers["Origin"] + "\r\n"
+                "WebSocket-Location: ws://" + self.request.host +
+                self.request.path + "\r\n\r\n")
         self.async_callback(self.open)(*args, **kwargs)
 
     def write_message(self, message):
@@ -120,8 +141,9 @@ class WebSocketHandler(tornado.web.RequestHandler):
         return wrapper
 
     def _on_frame_type(self, callback, byte):
-        if ord(byte) & 0x80 == 0x80:
-            raise Exception("Length-encoded format not yet supported")
+#        print "%x" % ord(byte)
+#        if ord(byte) & 0x80 == 0x80:
+#            raise Exception("Length-encoded format not yet supported")
         self.stream.read_until(
             "\xff", functools.partial(self._on_end_delimiter, callback))
 
