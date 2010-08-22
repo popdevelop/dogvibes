@@ -166,7 +166,7 @@ class PositionalSortMixIn(object):
         for obj in (other, self):
             obj.save()
 
-    def save(self, force_insert=True):
+    def save(self, force_insert=True, **kwargs):
         """Saves the model to the database.
         It populates the `position` field of the model automatically if there
         is no such field set. In this case, the element will be appended at
