@@ -27,8 +27,9 @@ RAW_YES = r'1'
 RAW_NO = r'0'
 
 class Dog():
-    def __init__(self, stream):
+    def __init__(self, stream, ip):
         self.stream = stream
+        self.ip     = ip
         self.active_handlers = []
 
     def set_username(self, username):
@@ -95,6 +96,7 @@ def connection_ready(sock, fd, events):
     while True:
         try:
             connection, address = sock.accept()
+            ip, port = address
         except socket.error, e:
             if e[0] not in (errno.EWOULDBLOCK, errno.EAGAIN):
                 raise
@@ -102,7 +104,7 @@ def connection_ready(sock, fd, events):
         connection.setblocking(0)
         stream = iostream.IOStream(connection)
 
-        dog = Dog(stream)
+        dog = Dog(stream, ip)
         # The first thing a Dog will send is its username. Catch it!
         stream.read_until(EOS, dog.set_username)
 
@@ -151,6 +153,44 @@ class TwitterHandler(tornado.web.RequestHandler,
         else:
             self.write("Congratulations, @%s is now authorized" % user["username"])
             self.finish()
+
+#
+# Check if dog and client are on the same LAN. Return apropriate API server
+# Could also be useful in the future when we'll have multiple API-servers
+# around the world.
+#
+class NearestServerHandler(tornado.web.RequestHandler):
+    @tornado.web.asynchronous
+    def get(self, username):
+        #XXX: Hardcode. Can we find out our own host name?
+        apiServer = "dogvib.es"
+
+        # Find the dog
+        dog = Dog.find(username)
+        if dog == None:
+            #XXX: Generate error here so client can know that dog is not connected
+            logging.warning("Someone tried to access %s, but it's not connected" % username)
+            return
+
+        # Get and compare IPs
+        client_ip = self.request.remote_ip.split('.')
+        dog_ip    = dog.ip.split('.')
+
+        #XXX: Is there any smarter way?
+        if(client_ip[0] == dog_ip[0] and
+           client_ip[1] == dog_ip[1] and
+           client_ip[2] == dog_ip[2]):
+            logging.info("Redirecting to new API server at %s (%s)" % ('.'.join(client_ip), username))
+            apiServer = '.'.join(client_ip)
+        
+        # Send back result
+        self.set_header("Content-Type", "text/javascript")
+        callback = self.get_argument("callback", None)
+        if callback:
+            self.write("%s({'error':0,'result':{'api_server':'%s'}})" % (callback, apiServer))
+        else:
+            self.write("{'error':0,'result':{'api_server':'%s'}}" % (apiServer))
+        self.finish();
 
 nbr = 0
 def assign_nbr():
@@ -277,6 +317,7 @@ class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
             (r"/getLoginInfo/*", LoginHandler), # TODO: split only on '/', avoids favicon
+            (r"/getNearestServer/([a-zA-Z0-9]+).*", NearestServerHandler),
             (r"/authTwitter/([a-zA-Z0-9]+).*", TwitterHandler), # TODO: split only on '/', avoids favicon
             (r"/stream/([a-zA-Z0-9]+).*", WSHandler),
             (r"/([a-zA-Z0-9]+).*", HTTPHandler), # TODO: split only on '/', avoids favicon

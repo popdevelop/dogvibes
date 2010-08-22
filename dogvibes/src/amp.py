@@ -4,13 +4,16 @@ import random
 import time
 import logging
 import shelve
-from django.forms.models import model_to_dict
 
 from models import Track
 from models import Playlist
 from models import Entry
 from models import User
 from models import Vote
+
+from django.db import models
+from django.db.models import Count
+from django.forms.models import model_to_dict
 
 class DogError(Exception):
     def __init__(self, value):
@@ -435,9 +438,10 @@ class Amp():
     def API_getAllTracksInQueue(self, request):
         # TODO: I don't know how to join these automatically
         tracks = []
-        for entry in Playlist.objects.get(id=self.tmpqueue_id).entry_set.all():
+        for entry in Playlist.objects.get(id=self.tmpqueue_id).entry_set.all().annotate(votes=Count('vote')):
             t = model_to_dict(entry.track)
             t["id"] = entry.id # use the unique id instead of track_id
+            t["votes"] = entry.votes
             tracks.append(t)
         request.finish(tracks)
 
@@ -488,66 +492,44 @@ class Amp():
             request.push({'state': self.get_state()})
             request.finish()
 
-    def API_addVote(self, uri, request):
-        #self.tick_version()
-        user = User.objects.get(username=request.user)
-        track = self.dogvibes.create_track_from_uri(uri)
-        playlist = Playlist.objects.get(id=self.tmpqueue_id)
+    def sort_playlist(self, playqueue):
+        # Sort tracks in playqueue on number of votes and creation time
+        if self.get_state() == gst.STATE_PLAYING:
+            playing = playqueue.entry_set.all()[0]
+        for i, e in enumerate(playqueue.entry_set.annotate(num_votes=Count('vote')).order_by('-num_votes', 'created_at')):
+            e.position = i
+            e.save()
+        # If we're playing, move that track to the top again
+        if self.get_state() == gst.STATE_PLAYING:
+            playing.insert_at(0)
 
-        matching_tracks = playlist.tracks.filter(uri=uri)
+
+    # TODO: addVote should exist in two modes, adding a URI from search and
+    # voting for a specific entry in the playqueue.
+    def API_addVote(self, uri, request):
+        user, created = User.objects.get_or_create(username=request.user, defaults={'avatar_url': request.avatar_url})
+        track = self.dogvibes.create_track_from_uri(uri)
+        playqueue = Playlist.objects.get(id=self.tmpqueue_id)
+
+        # Get the first matching track if several with the same URI
+        matching_tracks = playqueue.tracks.filter(uri=uri)
         if not matching_tracks:
             track = self.dogvibes.create_track_from_uri(uri)
-            entry = Entry.objects.create(track=track, playlist=playlist)
+            entry = Entry.objects.create(track=track, playlist=playqueue)
         else:
             entry = matching_tracks[len(matching_tracks)-1].entry_set.get()
 
         if user.votes_left() < 1:
             logging.debug("No more votes left for %s" % user.username)
             return
-
         if user.already_voted(track):
             logging.debug("%s already voted for track, ignoring" % user.username)
             return
-        #import pdb; pdb.set_trace()
 
         # This is the actual voting
         Vote.objects.create(entry=entry, user=user)
 
-#        nbr_votes = entry
-
- #       entry.insert_at
-
-#        new_pos = playlist.entry_set.filter(vote_set__count<=entry.vote_set.count()).latest()
-
-        # Don't move pass the playing track
-#        if entry.position <= 1:
-#            logging.debug("No need to move, at position %s" % entry.position)
-#        else:
-#                # find all with same amount of votes, and move pass them
-#                db.commit_statement('''select min(position) as new_pos,* from playlist_tracks where playlist_id = ? AND votes = ? AND position > 1''', [playlist_id, votes])
-#                # update votes
-#                row = db.fetchone()
-#                if row == None:
-#                    logging.debug("no need to move, no one to pass with %s votes" % votes)
-#                else:
-#                    #we have some tracks to jump over
-#                    new_pos = row['new_pos']
-#                    if new_pos <= 1:
-#                        logging.debug("cap movement to pos=2 (let playing song be first)")
-#                        new_pos=2
-#                    logging.debug("update pos, move from %s to %s" % (str(pos), str(new_pos)))
-#                    #move them down 1 position
-#                    db.commit_statement('''update playlist_tracks set position = position + 1 where playlist_id = ? and position >= ?''', [self.id, new_pos])
-#                    #put me above them
-#                    db.commit_statement('''update playlist_tracks set position = ? where playlist_id = ? and track_id = ?''', [new_pos, self.id, track_id])
-#
-#            #update the votes on the track
-#            db.commit_statement('''update playlist_tracks set votes = votes + 1 where playlist_id = ? and track_id = ?''', [self.id, track_id])
-#        else:
-#            #ADD TRACK
-#            logging.debug("add track with track_id = %s" % track_id)
-#            self.add_track(track, 1)
-
+        self.sort_playlist(playqueue)
 
         self.needs_push_update = True
         self.playlist_version += 1
@@ -557,9 +539,24 @@ class Amp():
         request.finish()
 
     def API_removeVote(self, uri, request):
+        user, created = User.objects.get_or_create(username=request.user, defaults={'avatar_url': request.avatar_url})
         track = self.dogvibes.create_track_from_uri(uri)
-        playlist = Playlist.get(self.tmpqueue_id)
-        playlist.remove_vote(track, request.user, request.avatar_url)
+        playqueue = Playlist.objects.get(id=self.tmpqueue_id)
+
+        # Get the first matching track if several with the same URI
+        # NOTE: this will possibly choose the wrong track if several tracks
+        # with the same URI are in the list
+        matching_tracks = playqueue.tracks.filter(uri=uri)
+        if not matching_tracks:
+            track = self.dogvibes.create_track_from_uri(uri)
+            entry = Entry.objects.create(track=track, playlist=playqueue)
+        else:
+            entry = matching_tracks[len(matching_tracks)-1].entry_set.get()
+
+        # Remove vote
+        entry.vote_set.filter(user=user).delete()
+
+        self.sort_playlist(playqueue)
 
         self.needs_push_update = True
         self.playlist_version += 1
@@ -569,9 +566,9 @@ class Amp():
         request.finish()
 
     def API_queue(self, uri, request):
-        playlist = Playlist.objects.get(id=self.tmpqueue_id)
+        playqueue = Playlist.objects.get(id=self.tmpqueue_id)
         tracks = self.dogvibes.create_tracks_from_uri(uri)
-        [Entry.objects.create(playlist=playlist, track=track) for track in tracks]
+        [Entry.objects.create(playlist=playqueue, track=track) for track in tracks]
 
         self.playlist_version += 1
         self.needs_push_update = True

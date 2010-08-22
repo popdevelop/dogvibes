@@ -23,7 +23,7 @@ class Database():
         self.add_statement('''create table if not exists playlists (id INTEGER PRIMARY KEY, name TEXT)''')
         # Table for storing the relation between playlists and tracks, i.e.
         # the contents of a playlists as references
-        self.add_statement('''create table if not exists entry (id INTEGER PRIMARY KEY, playlist_id INTEGER, track_id INTEGER, position INTEGER)''')
+        self.add_statement('''create table if not exists entry (id INTEGER PRIMARY KEY, playlist_id INTEGER, track_id INTEGER, position INTEGER, created_at TEXT, dummy TEXT)''')
         self.commit()
 
     def commit_statement(self, statement, args = []):
@@ -50,6 +50,7 @@ class Database():
         return self.cursor.lastrowid
 
 if __name__ == '__main__':
+    import os
     os.remove("dogvibes.db")
     db = Database()
     db.commit_statement('''insert into playlists (name) values (?)''', ["qurkloxuiikkolkjhhf0"])

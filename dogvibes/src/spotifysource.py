@@ -61,10 +61,9 @@ class SpotifySource:
             duration = int(float(e.find('.//{%s}length' % ns).text) * 1000)
             album_uri = "spotify://" + e.find('.//{%s}album' % ns).attrib['href']
 
-        track, created = Track.objects.get_or_create(uri="spotify://" + uri, title=title,
-                                                    artist=artist, album=album,
-                                                    album_uri=album_uri, duration=duration)
-
+        track, created = Track.objects.get_or_create(uri="spotify://" + uri,
+                                                     defaults={'artist': artist, 'title': title, 'album': album,
+                                                               'album_uri': "spotify://" + album_uri, 'duration': duration})
         return track
 
     def create_tracks_from_uri(self, uri):
@@ -100,9 +99,9 @@ class SpotifySource:
                 duration = int(float(e.find('.//{%s}length' % ns).text) * 1000)
                 album_uri = "spotify://" + e.find('.//{%s}album' % ns).attrib['href']
 
-            track, created = Track.objects.get_or_create(uri="spotify://" + uri, title=title,
-                                                         artist=artist, album=album,
-                                                         album_uri=album_uri, duration=duration)
+            track, created = Track.objects.get_or_create(uri="spotify://" + uri,
+                                                         defaults={'artist': artist, 'title': title, 'album': album,
+                                                                   'album_uri': "spotify://" + album_uri, 'duration': duration})
             tracks.append(track)
             return tracks
 

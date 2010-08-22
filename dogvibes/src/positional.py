@@ -125,6 +125,13 @@ class PositionalSortMixIn(object):
         one_before.save()
 
     @transaction.commit_on_success
+    def insert_before(self, other):
+        """Inserts an object in the database so that the objects will be ordered just
+        behind the `other` object - this has to be of the same type, of course"""
+        # we only need to call another method and prepare the proper parameters
+        self.insert_at(other.position)
+
+    @transaction.commit_on_success
     def insert_after(self, other):
         """Inserts an object in the database so that the objects will be ordered just
         behind the `other` object - this has to be of the same type, of course"""
