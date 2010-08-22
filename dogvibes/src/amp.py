@@ -499,7 +499,7 @@ class Amp():
         for i, e in enumerate(playqueue.entry_set.annotate(num_votes=Count('vote')).order_by('-num_votes', 'created_at')):
             e.position = i
             e.save()
-        # If we're playing, move that track to the top again
+        # If we'e playing, move that track to the top again
         if self.get_state() == gst.STATE_PLAYING:
             playing.insert_at(0)
 
@@ -511,6 +511,15 @@ class Amp():
         track = self.dogvibes.create_track_from_uri(uri)
         playqueue = Playlist.objects.get(id=self.tmpqueue_id)
 
+        if user.votes_left() < 1:
+            logging.debug("No more votes left for %s" % user.username)
+            request.finish(error = 3)
+            return
+        if user.already_voted(track):
+            logging.debug("%s already voted for track, ignoring" % user.username)
+            request.finish(error = 3)
+            return
+
         # Get the first matching track if several with the same URI
         matching_tracks = playqueue.tracks.filter(uri=uri)
         if not matching_tracks:
@@ -518,13 +527,6 @@ class Amp():
             entry = Entry.objects.create(track=track, playlist=playqueue)
         else:
             entry = matching_tracks[len(matching_tracks)-1].entry_set.get()
-
-        if user.votes_left() < 1:
-            logging.debug("No more votes left for %s" % user.username)
-            return
-        if user.already_voted(track):
-            logging.debug("%s already voted for track, ignoring" % user.username)
-            return
 
         # This is the actual voting
         Vote.objects.create(entry=entry, user=user)

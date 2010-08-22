@@ -33,7 +33,8 @@ class User(models.Model):
         return 5 - User.objects.get(id=self.id).vote_set.all().count()
 
     def already_voted(self, track):
-        #return self.vote_set.all().count() == 0
+        entry = track.entry_set.all()
+        return self.vote_set.filter(entry=entry) != []
 
     def __unicode__(self):
         return self.username
