@@ -33,8 +33,10 @@ class User(models.Model):
         return 5 - User.objects.get(id=self.id).vote_set.all().count()
 
     def already_voted(self, track):
-        entry = track.entry_set.all()
-        return self.vote_set.filter(entry=entry) != []
+        if track.entry_set.filter(vote__user=self).count() > 0:
+            return self.vote_set.filter(entry=track.entry_set.all()[0]) != []
+        else:
+            return False
 
     def __unicode__(self):
         return self.username
@@ -60,20 +62,22 @@ class Entry(PositionalSortMixIn, models.Model):
     playlist = models.ForeignKey(Playlist)
     track = models.ForeignKey(Track)
     created_at = models.DateTimeField(auto_now_add=True)
-    dummy = models.CharField()
     def __unicode__(self):
         return "%s: %s [%d, %s]" % (self.playlist.name, self.track.title, self.position, self.created_at)
     class Meta:
-        db_table = 'entry'
+        db_table = 'entries'
         app_label = "myapp"
-        get_latest_by = 'timestamp'
+        get_latest_by = 'created_at'
 
 
 class Vote(models.Model):
     user = models.ForeignKey(User)
     entry = models.ForeignKey(Entry)
+    created_at = models.DateTimeField(auto_now_add=True)
+
     def __unicode__(self):
         return self.user.username + ": " + self.entry.track.title
     class Meta:
         db_table = 'votes'
         app_label = "myapp"
+        get_latest_by = 'created_at'

@@ -12,7 +12,7 @@ class Database():
         # Table for users, probably similar to a twitter user?
         self.add_statement('''create table if not exists users (id INTEGER PRIMARY KEY, vote_id INTEGER, username STRING, avatar_url STRING)''')
         # Table with votes
-        self.add_statement('''create table if not exists votes (id INTEGER PRIMARY KEY, user_id INTEGER, entry_id INTEGER)''')
+        self.add_statement('''create table if not exists votes (id INTEGER PRIMARY KEY, user_id INTEGER, entry_id INTEGER, created_at TEXT)''')
         # Table for storing information of all tracks that has passed through
         # dogvibes in any way, like added to a queue of playlist. This way we
         # are able to keep track of properties such as play count and can
@@ -23,7 +23,7 @@ class Database():
         self.add_statement('''create table if not exists playlists (id INTEGER PRIMARY KEY, name TEXT)''')
         # Table for storing the relation between playlists and tracks, i.e.
         # the contents of a playlists as references
-        self.add_statement('''create table if not exists entry (id INTEGER PRIMARY KEY, playlist_id INTEGER, track_id INTEGER, position INTEGER, created_at TEXT, dummy TEXT)''')
+        self.add_statement('''create table if not exists entries (id INTEGER PRIMARY KEY, playlist_id INTEGER, track_id INTEGER, position INTEGER, created_at TEXT)''')
         self.commit()
 
     def commit_statement(self, statement, args = []):

@@ -279,13 +279,8 @@ class Dogvibes():
         request.finish()
 
     def API_moveTrackInPlaylist(self, playlist_id, track_id, position, request):
-#        try:
-#            playlist = Playlist.get(playlist_id)
-#            playlist.move_track(int(track_id), int(position))
-#        except ValueError as e:
-#            raise
-#        self.needs_push_update = True
-        print "API_moveTrackInPlaylist not implemented"
+        e = Entry.objects.get(id=track_id)
+        e.insert_at(int(position)-1)
         request.finish()
 
     def API_getSearchHistory(self, nbr, request):
@@ -298,5 +293,5 @@ class Dogvibes():
         db.commit_statement('''delete from users''')
         db.commit_statement('''delete from tracks''')
         db.commit_statement('''delete from playlists where id != 1''')
-        db.commit_statement('''delete from playlist_tracks''')
+        db.commit_statement('''delete from entries''')
         request.finish()

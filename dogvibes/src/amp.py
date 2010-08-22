@@ -440,8 +440,9 @@ class Amp():
         tracks = []
         for entry in Playlist.objects.get(id=self.tmpqueue_id).entry_set.all().annotate(votes=Count('vote')):
             t = model_to_dict(entry.track)
-            t["id"] = entry.id # use the unique id instead of track_id
-            t["votes"] = entry.votes
+            t["id"] = entry.id # use the unique id instead of track id
+            t["votes"] = entry.votes # TODO: remove
+            t["voters"] = [model_to_dict(v.user) for v in entry.vote_set.select_related()]
             tracks.append(t)
         request.finish(tracks)
 
@@ -577,7 +578,6 @@ class Amp():
         request.finish()
 
     def API_queueAndPlay(self, uri, request):
-
         # If in tmpqueue and state is playing and there are tracks in tmpqueue.
         # Then remove the currently playing track. Since we do not want to queue tracks
         # from just "clicking around".
@@ -656,9 +656,18 @@ class Amp():
         request.finish()
 
     def API_getActivity(self, limit, request):
-        request.finish(User.get_activity(int(limit)))
+        activities = []
+        for v in Vote.objects.all()[0:int(limit)]:
+            a = model_to_dict(v.user)
+            a.update(model_to_dict(v.user))
+            a.update(model_to_dict(v.entry.track))
+            a["id"] = v.entry.id
+            activities.append(a)
+        request.finish(activities)
 
     def API_getUserInfo(self, request):
         user, created = User.objects.get_or_create(username=request.user,
-                                                   avatar_url=request.avatar_url)
-        request.finish(model_to_dict(user))
+                                                   defaults={'avatar_url': request.avatar_url})
+        ret = model_to_dict(user)
+        ret["votes"] = user.vote_set.count()
+        request.finish(ret)
