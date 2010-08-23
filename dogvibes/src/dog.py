@@ -114,7 +114,7 @@ def run_command(nbr, command, user, avatar_url):
     if '_' in params:
         params.pop('_')
 
-    request = DogRequest(nbr, user, avatar_url, msg_id, js_callback)
+    request = DogRequest(command, nbr, user, avatar_url, msg_id, js_callback)
 
 #    try:
     if True:
@@ -175,18 +175,21 @@ def run_command(nbr, command, user, avatar_url):
     # The request is not ended here, but instead in the DogRequest.callback
 
 class DogRequest:
-    def __init__(self, nbr, user, avatar_url, msg_id, js_callback):
+    def __init__(self, description, nbr, user, avatar_url, msg_id, js_callback):
+        self.description = description
         self.nbr = nbr
         self.user = user
         self.avatar_url = avatar_url
         self.msg_id = msg_id
         self.js_callback = js_callback
         self.pushes = []
+        self.duration = time.time()
 
     def push(self, data):
         self.pushes.append(data)
 
     def finish(self, data = None, error = 0, raw = False, push = False):
+        logging.debug("%.3fs: %s" % (time.time() - self.duration, self.description))
         return_data(self.nbr, data, error, raw, self.js_callback, self.msg_id, push)
         joined_pushes = {}
         [ joined_pushes.update(push) for push in self.pushes ]
