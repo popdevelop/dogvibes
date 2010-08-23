@@ -53,7 +53,6 @@ class SpotifySource:
         self.lock.acquire()
         self.spotify.set_property("resolve-uri", uri)
         resolved_uri = self.spotify.get_property("resolve-uri-result")
-        print resolved_uri
         self.lock.release()
         fetched_track = eval(resolved_uri)[0]
         
