@@ -670,9 +670,9 @@ class Amp():
         activities = []
         for v in Vote.objects.all()[0:int(limit)]:
             a = model_to_dict(v.user)
-            a.update(model_to_dict(v.user))
             a.update(model_to_dict(v.entry.track))
             a["id"] = v.entry.id
+            a["time"] = time.mktime(time.strptime(v.created_at.split(".")[0], "%Y-%m-%d %H:%M:%S"))
             activities.append(a)
         request.finish(activities)
 
