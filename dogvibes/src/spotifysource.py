@@ -2,6 +2,7 @@ import gst
 import urlparse, urllib
 import xml.etree.ElementTree as ET
 from models import Track
+import threading
 
 class SpotifySource:
 
@@ -14,18 +15,27 @@ class SpotifySource:
         self.search_prefix = "spotify"
         self.spotify = None
         self.bin = None
+        self.tracks = []
+        self.condition = threading.Condition()
+        self.lock = threading.Lock()
 
     def __getstate__(self):
         odict = self.__dict__.copy()
         del odict['spotify']
         del odict['bin']
         del odict['amp']
+        del odict['condition']
+        del odict['lock']
+        del odict['tracks']
         return odict
 
     def __setstate__(self, dict):
         self.__dict__.update(dict)   # update attributes
         self.created = False
         self.amp = None
+        self.condition = threading.Condition()
+        self.lock = threading.Lock()
+        self.tracks = []
         self.get_src()
 
     @classmethod
@@ -149,57 +159,26 @@ class SpotifySource:
             self.spotify.connect('play-token-lost', self.play_token_lost)
         return self.bin
 
+    def search_finished(self, src, result):
+        result = eval(result)
 
-    def uglyfind(self, obj, findstr):
-        try:
-            saveto = obj.find(findstr).text
-        except:
-            saveto = "NA"
+        for track in result['tracks']:
+            track['artist'] = track['artist'].encode('raw_unicode_escape').decode('utf-8')
+            track['title'] = track['title'].encode('raw_unicode_escape').decode('utf-8')
+            track['album'] = track['album'].encode('raw_unicode_escape').decode('utf-8')
+        self.tracks = result['tracks'] 
 
-        return saveto
-
-
-    def uglyfindattr(self, obj, findstr):
-        try:
-            saveto = obj.find(findstr).attrib['href']
-        except:
-            saveto = "NA"
-
-        return saveto
-
+        self.condition.acquire()
+        self.condition.notify()
+        self.condition.release()
 
     def search(self, query):
-        tracks = []
+        self.condition.acquire()
+        self.spotify.set_property("search", query.encode('utf-8'))
+        self.condition.wait()
+        self.condition.release()
+        return self.tracks
 
-        query = urllib.quote(urllib.unquote(query).encode('utf8'),'=&?/')
-
-        url = u"http://ws.spotify.com/search/1/track?q=%s" % query
-
-        try:
-            u = urllib.urlopen(url)
-            tree = ET.parse(u)
-        except:
-            return []
-
-        ns = "http://www.spotify.com/ns/music/1"
-
-        for e in tree.findall('.//{%s}track' % ns):
-            title = self.uglyfind(e, './/{%s}name' % ns)
-            artist = self.uglyfind(e, './/{%s}artist/{%s}name' % (ns, ns))
-            album = self.uglyfind(e, './/{%s}album/{%s}name' % (ns, ns))
-            album_uri = "spotify://" + self.uglyfindattr(e, './/{%s}album' % ns)
-            duration = int(float(self.uglyfind(e, './/{%s}length' % ns)) * 1000)
-            uri = "spotify://" + e.items()[0][1]
-            popularity = self.uglyfind(e, './/{%s}popularity' % ns)
-            territories = self.uglyfind(e, './/{%s}album/{%s}availability/{%s}territories' % (ns, ns, ns))
-            # TODO: Should the track be added or removed when territories isn't present.
-            # Removing just in case...
-            if territories and ('SE' in territories or territories == 'worldwide'):
-                track = Track(uri=uri, title=title, artist=artist, album=album,
-                              album_uri=album_uri, duration=duration, popularity=popularity)
-                tracks.append(track)
-
-        return tracks
 
     def get_albums(self, query):
         #artist_uri = SpotifySource.strip_protocol(artist_uri)
