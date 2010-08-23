@@ -680,5 +680,11 @@ class Amp():
         user, created = User.objects.get_or_create(username=request.user,
                                                    defaults={'avatar_url': request.avatar_url})
         ret = model_to_dict(user)
-        ret["votes"] = user.vote_set.count()
+        ret["votes"] = user.votes_left()
+        voted_tracks = []
+        for vote in user.vote_set.all():
+            track = model_to_dict(vote.entry.track)
+            track["id"] = vote.entry.id
+            voted_tracks.append(track)
+        ret["voted_tracks"] = voted_tracks
         request.finish(ret)
