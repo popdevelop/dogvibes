@@ -32,11 +32,8 @@ class User(models.Model):
     def votes_left(self):
         return 5 - User.objects.get(id=self.id).vote_set.all().count()
 
-    def already_voted(self, track):
-        if track.entry_set.filter(vote__user=self).count() > 0:
-            return self.vote_set.filter(entry=track.entry_set.all()[0]) != []
-        else:
-            return False
+    def already_voted(self, entry):
+        return entry.vote_set.filter(user=self).count() > 0
 
     def __unicode__(self):
         return self.username

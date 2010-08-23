@@ -512,22 +512,24 @@ class Amp():
         track = self.dogvibes.create_track_from_uri(uri)
         playqueue = Playlist.objects.get(id=self.tmpqueue_id)
 
-        if user.votes_left() < 1:
-            logging.debug("No more votes left for %s" % user.username)
-            request.finish(error = 3)
-            return
-        if user.already_voted(track):
-            logging.debug("%s already voted for track, ignoring" % user.username)
-            request.finish(error = 3)
-            return
-
         # Get the first matching track if several with the same URI
         matching_tracks = playqueue.tracks.filter(uri=uri)
         if not matching_tracks:
             track = self.dogvibes.create_track_from_uri(uri)
-            entry = Entry.objects.create(track=track, playlist=playqueue)
+            entry = Entry(track=track, playlist=playqueue)
         else:
-            entry = matching_tracks[len(matching_tracks)-1].entry_set.get()
+            entry = matching_tracks[0].entry_set.get()
+
+        if user.votes_left() < 1:
+            logging.debug("No more votes left for %s" % user.username)
+            request.finish(error = 3)
+            return
+        if user.already_voted(entry):
+            logging.debug("%s already voted for track, ignoring" % user.username)
+            request.finish(error = 3)
+            return
+
+        entry.save()
 
         if entry.position == 0 and self.get_state() == "playing":
             logging.debug("Can't vote for playing track")
@@ -559,7 +561,7 @@ class Amp():
             track = self.dogvibes.create_track_from_uri(uri)
             entry = Entry.objects.create(track=track, playlist=playqueue)
         else:
-            entry = matching_tracks[len(matching_tracks)-1].entry_set.get()
+            entry = matching_tracks[0].entry_set.get()
 
         if entry.position == 0 and self.get_state() == "playing":
             logging.debug("Can't remove vote for playing track")
@@ -568,7 +570,6 @@ class Amp():
 
         # Remove vote
         entry.vote_set.filter(user=user).delete()
-
         self.sort_playlist(playqueue)
 
         self.needs_push_update = True
