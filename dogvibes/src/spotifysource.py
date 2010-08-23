@@ -49,31 +49,25 @@ class SpotifySource:
         uri = SpotifySource.strip_protocol(uri)
         if uri == None:
             return None
-        url = "http://ws.spotify.com/lookup/1/?uri=" + uri
 
-        try:
-            e = ET.parse(urllib.urlopen(url))
-        except Exception as e:
-            return None
+        self.lock.acquire()
+        self.spotify.set_property("resolve-uri", uri)
+        resolved_uri = self.spotify.get_property("resolve-uri-result")
+        print resolved_uri
+        self.lock.release()
+        fetched_track = eval(resolved_uri)[0]
+        
+        title = fetched_track['title'].encode('raw_unicode_escape').decode('utf-8')
+        artist = fetched_track['artist'].encode('raw_unicode_escape').decode('utf-8')
+        album = fetched_track['album'].encode('raw_unicode_escape').decode('utf-8')
+        nuri = fetched_track['uri']
+        album_uri = fetched_track['album_uri']
+        duration = fetched_track['duration']
+        popularity = fetched_track['popularity']
 
-        ns = "http://www.spotify.com/ns/music/1"
-
-        if 'album' in uri:
-            title = ""
-            artist = e.find('.//{%s}artist/{%s}name' % (ns, ns)).text
-            album = e.find('.//{%s}name' % ns).text
-            duration = 0
-            album_uri = uri
-        else:
-            title = e.find('.//{%s}name' % ns).text
-            artist = e.find('.//{%s}artist/{%s}name' % (ns, ns)).text
-            album = e.find('.//{%s}album/{%s}name' % (ns, ns)).text
-            duration = int(float(e.find('.//{%s}length' % ns).text) * 1000)
-            album_uri = "spotify://" + e.find('.//{%s}album' % ns).attrib['href']
-
-        track, created = Track.objects.get_or_create(uri="spotify://" + uri,
+        track, created = Track.objects.get_or_create(uri=nuri,
                                                      defaults={'artist': artist, 'title': title, 'album': album,
-                                                               'album_uri': "spotify://" + album_uri, 'duration': duration})
+                                                               'album_uri': album_uri, 'duration': duration})
         return track
 
     def create_tracks_from_uri(self, uri):
