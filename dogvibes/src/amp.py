@@ -495,13 +495,13 @@ class Amp():
 
     def sort_playlist(self, playqueue):
         # Sort tracks in playqueue on number of votes and creation time
-        if self.get_state() == gst.STATE_PLAYING:
+        if self.get_state() == "playing":
             playing = playqueue.entry_set.all()[0]
         for i, e in enumerate(playqueue.entry_set.annotate(num_votes=Count('vote')).order_by('-num_votes', 'created_at')):
             e.position = i
             e.save()
         # If we'e playing, move that track to the top again
-        if self.get_state() == gst.STATE_PLAYING:
+        if self.get_state() == "playing":
             playing.insert_at(0)
 
 
@@ -529,6 +529,11 @@ class Amp():
         else:
             entry = matching_tracks[len(matching_tracks)-1].entry_set.get()
 
+        if entry.position == 0 and self.get_state() == "playing":
+            logging.debug("Can't vote for playing track")
+            request.finish(error = 3)
+            return
+
         # This is the actual voting
         Vote.objects.create(entry=entry, user=user)
 
@@ -555,6 +560,11 @@ class Amp():
             entry = Entry.objects.create(track=track, playlist=playqueue)
         else:
             entry = matching_tracks[len(matching_tracks)-1].entry_set.get()
+
+        if entry.position == 0 and self.get_state() == "playing":
+            logging.debug("Can't remove vote for playing track")
+            request.finish(error = 3)
+            return
 
         # Remove vote
         entry.vote_set.filter(user=user).delete()
