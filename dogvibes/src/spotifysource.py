@@ -163,13 +163,17 @@ class SpotifySource:
     def search_finished(self, src, result):
         result = eval(result)
 
-        for track in result['tracks']:
-            track['artist'] = track['artist'].encode('raw_unicode_escape').decode('utf-8')
-            track['title'] = track['title'].encode('raw_unicode_escape').decode('utf-8')
-            track['album'] = track['album'].encode('raw_unicode_escape').decode('utf-8')
-        self.tracks = result['tracks'] 
-
         self.condition.acquire()
+        self.tracks = []
+
+        for track in result['tracks']:
+            artist = track['artist'].encode('raw_unicode_escape').decode('utf-8')
+            title = track['title'].encode('raw_unicode_escape').decode('utf-8')
+            album = track['album'].encode('raw_unicode_escape').decode('utf-8')
+            ntrack = Track(uri=track['uri'], title=title, artist=artist, album=album,
+                           album_uri=track['album_uri'], duration=track['duration'], popularity=track['popularity'])
+            self.tracks.append(ntrack)
+
         self.condition.notify()
         self.condition.release()
 
