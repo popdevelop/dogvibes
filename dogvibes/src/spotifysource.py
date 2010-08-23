@@ -157,6 +157,7 @@ class SpotifySource:
             self.created = True
             # Connect playtoken lost signal
             self.spotify.connect('play-token-lost', self.play_token_lost)
+            self.spotify.connect('search-finished', self.search_finished)
         return self.bin
 
     def search_finished(self, src, result):
