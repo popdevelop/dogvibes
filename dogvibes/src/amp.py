@@ -300,9 +300,15 @@ class Amp():
                 self.active_playlists_track_id = -1
                 return None
         else:
-            # Try the first active_play_list id
-            entry = playlist.entry_set.all()[0]
-            self.active_playlists_track_id = entry.id
+            playqueue = Playlist.objects.get(id=self.tmpqueue_id)
+            self.sort_playlist(playqueue)
+            # Try playqueue
+            try:
+                entry = playqueue.entry_set.all()[0]
+                self.active_playlists_track_id = entry.id
+            except:
+                logging.debug("No tracks in playqueue, or in any playlist")
+                return None
 
             if self.start_track(entry.track) == False:
                 self.active_playlists_track_id = -1
