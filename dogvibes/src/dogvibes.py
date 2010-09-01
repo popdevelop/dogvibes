@@ -86,15 +86,6 @@ class Dogvibes():
                     return tracks
         raise ValueError('Could not create track from URI')
 
-    def create_tracks_from_album(self, album):
-        tracks = []
-        for name,source in self.sources.iteritems():
-            if source:
-                tracks = source.create_tracks_from_album(album)
-                if tracks != None:
-                    return tracks
-        raise ValueError('Could not create track from Album')
-
     def modify_spotifysource(self, username, password):
         if self.sources.has_key("spotify"):
             self.sources["spotify"].amp.stop()

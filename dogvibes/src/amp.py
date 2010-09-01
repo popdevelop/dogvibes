@@ -199,14 +199,11 @@ class Amp():
     def pipeline_message(self, bus, message):
         t = message.type
         if t == gst.MESSAGE_EOS:
+            logging.debug ("Song is over changing track.")
             self.next_track()
-            #request.push({'state': self.get_state()})
-            #request.push(self.track_to_client())
+            self.playlist_version += 1
             self.vote_version += 1
             self.needs_push_update = True
-            # TODO: is this enough? An update is pushed to the clients
-            # but will the info be correct?
-
 
     def start_track(self, track):
         (pending, state, timeout) = self.pipeline.get_state()
@@ -461,6 +458,7 @@ class Amp():
     def API_nextTrack(self, request):
         self.next_track()
         self.playlist_version += 1
+        self.vote_version += 1
         request.push({'playlist_id': self.get_active_playlist_id()})
         request.push({'state': self.get_state()})
         request.push(self.track_to_client())
