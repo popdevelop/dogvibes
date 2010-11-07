@@ -43,6 +43,7 @@
 #define DEFAULT_PASS "pass"
 #define DEFAULT_LOGGED_IN FALSE
 #define DEFAULT_SPOTIFY_KEY_FILE "spotify_appkey.key"
+#define DEFAULT_RESOLVE_URI_RESULT ""
 #define BUFFER_TIME_MAX 50000000
 #define BUFFER_TIME_DEFAULT 2000000
 #define SPOTIFY_DEFAULT_SAMPLE_RATE 44100
@@ -74,6 +75,9 @@ enum
   ARG_URI,
   ARG_LOGGED_IN,
   ARG_SPOTIFY_KEY_FILE,
+  ARG_SEARCH,
+  ARG_RESOLVE_URI,
+  ARG_RESOLVE_URI_RESULT,
   ARG_BUFFER_TIME
 };
 
@@ -81,13 +85,14 @@ enum
 enum
 {
   SIGNAL_PLAY_TOKEN_LOST,
+  SIGNAL_SEARCH_FINISHED,
   LAST_SIGNAL
 };
 
 static guint gst_spot_signals[LAST_SIGNAL] = { 0 };
 
 /* thread safe functions */
-static sp_error run_spot_cmd (GstSpotSrc *spot, enum spot_cmd cmd, guint64 *retval, gint64 opt);
+static sp_error run_spot_cmd (GstSpotSrc *spot, enum spot_cmd cmd, guint64 *retval, gint64 opt, void *userdata);
 static void do_end_of_track (GstSpotSrc *spot);
 
 /* libspotify */
@@ -140,8 +145,9 @@ static sp_session_callbacks g_callbacks = {
   &spotify_cb_end_of_track
 };
 
-static uint8_t g_appkey[321];
-static const size_t g_appkey_size = sizeof (g_appkey);
+static uint8_t appkey[321];
+/* FIXME: read size instead */
+static const size_t appkey_size = sizeof (appkey);
 
 /* list of spotify commad work structs to be processed */
 static GstSpotSrc *ugly_spot;
@@ -275,6 +281,183 @@ spotify_cb_play_token_lost (sp_session *session)
   g_signal_emit (ugly_spot, gst_spot_signals[SIGNAL_PLAY_TOKEN_LOST], 0);
 }
 
+static gchar
+*replace_fnutt (const gchar *str) {
+  int i;
+
+  gchar *ret = g_strdup (str);
+
+  for (i = 0; ret[i] != '\0'; i++) {
+    if (ret[i] == '\"') {
+      ret[i] = '\'';
+    }
+  }
+
+  return ret;
+}
+
+static void
+serialize_track (sp_track *track, GString *str)
+{
+  while (sp_track_is_loaded (track) == 0) {
+    gint timeout = 0;
+    sp_session_process_events (GST_SPOT_SRC_SPOTIFY_SESSION (ugly_spot), &timeout);
+  }
+
+  sp_link *link = sp_link_create_from_track (track, 0);
+  char spotify_uri[256];
+
+  GST_DEBUG_OBJECT (ugly_spot, "trying to serialize track");
+
+  if (0 > sp_link_as_string (link, spotify_uri, sizeof (spotify_uri))) {
+    GST_CAT_ERROR_OBJECT (gst_spot_src_debug_cb, ugly_spot, "Could not read track uri");
+    return;
+  }
+
+  sp_artist *artist = sp_track_artist (track, 0);
+  sp_album *album = sp_track_album (track);
+
+  link = sp_link_create_from_album (album);
+  char album_uri[256];
+
+  if (0 > sp_link_as_string (link, album_uri, sizeof (album_uri))) {
+    GST_CAT_ERROR_OBJECT (gst_spot_src_debug_cb, ugly_spot, "Could not read album uri");
+    return;
+  }
+
+  gchar *track_name = replace_fnutt (sp_track_name (track));
+  gchar *artist_name = replace_fnutt (sp_artist_name (artist));
+  gchar *album_name = replace_fnutt (sp_album_name (album));
+
+  g_string_append_printf (str, "{"	     \
+			  "\"title\":u\"%s\"," \
+			  "\"artist\":u\"%s\","	\
+			  "\"album\":u\"%s\","		   \
+			  "\"album_uri\":\"spotify://%s\","	\
+			  "\"uri\":\"spotify://%s\","		\
+			  "\"duration\":%d,"			\
+			  "\"popularity\":\"%f\""			\
+			  "}",
+			  track_name,
+			  artist_name,
+			  album_name,
+			  album_uri,
+			  spotify_uri,
+			  sp_track_duration (track),
+			  sp_track_popularity (track) / 100.0);
+
+  g_free (track_name);
+  g_free (artist_name);
+  g_free (album_name);
+}
+
+static void
+serialize_tracks_in_album (sp_album *album, GString *str)
+{
+  //FIXME IMPLEMENT ME
+/*   sp_albumbrowse *sp_ab = sp_albumbrowse_create (sp_session *session, */
+/*       sp_album *album, albumbrowse_complete_cb *callback, void *userdata) */
+
+/*   int i; */
+
+/*   for (i = 0; i < sp_albumbrowse_num_tracks(album)) { */
+/*     serialize_track(); */
+/*   } */
+
+  return;
+}
+
+static void
+serialize_album (sp_album *album, GString *str)
+{
+  g_string_append_printf (str, "{"		\
+			  "\"title\":\"%s\"," \
+			  "\"year\":\"%d\"," \
+			  "}",
+			  replace_fnutt (sp_album_name(album)),
+			  sp_album_year(album)
+			  );
+}
+
+static gchar 
+*serialize_link (sp_link *link)
+{
+  GST_DEBUG_OBJECT (ugly_spot, "trying to serialize link");
+
+  GString *res = g_string_new ("[");
+  gchar *ret;
+
+  switch (sp_link_type (link)) {
+  case (SP_LINKTYPE_TRACK):
+    serialize_track (sp_link_as_track (link), res);
+    break;
+  case (SP_LINKTYPE_ALBUM):
+    serialize_tracks_in_album (sp_link_as_album (link), res);
+    break;
+  default:
+    GST_CAT_ERROR_OBJECT (gst_spot_src_debug_cb, ugly_spot, "Spotify URI type not yet supported.");
+    break;
+  }
+
+  g_string_append_printf (res, "]");
+  ret = res->str;
+  g_string_free (res, FALSE);
+
+  return ret;
+}
+
+static gchar 
+*serialize_search (sp_search *search)
+{
+  int i;
+  GString *res = g_string_new ("{");
+  gchar *ret;
+
+  //printf("Query          : %s\n", sp_search_query(search));
+  //printf("Did you mean   : %s\n", sp_search_did_you_mean(search));
+  //printf("Tracks in total: %d\n", sp_search_total_tracks(search));
+
+  g_string_append_printf (res, "\"tracks\":[");
+  for (i = 0; i < sp_search_num_tracks (search); ++i) {
+    serialize_track (sp_search_track(search, i), res);
+    g_string_append_printf (res, ",");
+  }
+  g_string_append_printf (res, "]");
+
+  g_string_append_printf (res, ",\"albums\":[");
+  for (i = 0; i < sp_search_num_albums (search) && i < 10; ++i) {
+    serialize_album (sp_search_album (search, i), res);
+    g_string_append_printf (res, ",");
+  }
+  g_string_append_printf (res, "]");
+
+  g_string_append_printf (res, ",\"didyoumean\":\"%s\"", sp_search_did_you_mean (search));
+  g_string_append_printf (res, "}");
+
+  ret = res->str;
+  g_string_free (res, FALSE);
+
+  return ret;
+}
+
+static void 
+spotify_cb_search_complete(sp_search *search, void *userdata)
+{
+  struct spotify_search *s_s = (struct spotify_search *) userdata; 
+
+  if (search && SP_ERROR_OK == sp_search_error (search)) {
+    gchar *ser_result;
+    ser_result = serialize_search (search);
+    g_signal_emit (ugly_spot, gst_spot_signals[SIGNAL_SEARCH_FINISHED], 0, ser_result);
+  } else {
+    GST_CAT_ERROR_OBJECT (gst_spot_src_debug_cb, ugly_spot, "Failed to search: %s\n",
+        sp_error_message (sp_search_error(search)));
+  }
+
+  sp_search_release (search);
+  g_free (s_s->query);
+  g_free (s_s);
+}
 
 /*****************************************************************************/
 /*** SPOTIFY THREAD FUNCTIONS ************************************************/
@@ -290,7 +473,7 @@ do_end_of_track (GstSpotSrc *spot)
 }
 
 static sp_error
-run_spot_cmd (GstSpotSrc *spot, enum spot_cmd cmd, guint64 *retval, gint64 opt)
+run_spot_cmd (GstSpotSrc *spot, enum spot_cmd cmd, guint64 *retval, gint64 opt, void *userdata)
 {
   struct spot_work *spot_work;
   sp_error error;
@@ -303,6 +486,7 @@ run_spot_cmd (GstSpotSrc *spot, enum spot_cmd cmd, guint64 *retval, gint64 opt)
   spot_work->retval = 0;
   spot_work->error = SP_ERROR_OK;
   spot_work->opt = opt;
+  spot_work->userdata = userdata;
 
   /* add work struct to list of works */
   g_mutex_lock (spot->process_events_mutex);
@@ -311,7 +495,9 @@ run_spot_cmd (GstSpotSrc *spot, enum spot_cmd cmd, guint64 *retval, gint64 opt)
 
   /* wait for processing */
   g_mutex_lock (spot_work->spot_mutex);
-  GST_CAT_DEBUG_OBJECT (gst_spot_src_debug_threads, spot, "Broadcast process_events_cond");
+  GST_CAT_DEBUG_OBJECT (gst_spot_src_debug_threads, spot,
+			"Broadcast process_events_cond running %d"
+			, spot_work->cmd);
   g_cond_broadcast (spot->process_events_cond);
   g_cond_wait (spot_work->spot_cond, spot_work->spot_mutex);
   g_mutex_unlock (spot_work->spot_mutex);
@@ -325,6 +511,8 @@ run_spot_cmd (GstSpotSrc *spot, enum spot_cmd cmd, guint64 *retval, gint64 opt)
   g_mutex_free (spot_work->spot_mutex);
   g_free (spot_work);
 
+  GST_CAT_DEBUG_OBJECT (gst_spot_src_debug_threads, spot, "Finnished!!");
+
   return error;
 }
 
@@ -333,6 +521,7 @@ static gboolean spotify_create_session (GstSpotSrc *spot)
   sp_session_config config;
   sp_error error;
   FILE *keyfile;
+  size_t ret;
 
   keyfile = fopen (GST_SPOT_SRC_SPOTIFY_KEY_FILE (spot), "r");
   if (keyfile == NULL) {
@@ -342,11 +531,18 @@ static gboolean spotify_create_session (GstSpotSrc *spot)
   }
 
   //FIXME error check
-  fread (g_appkey, sizeof(uint8_t), g_appkey_size, keyfile);
+  ret = fread (appkey, sizeof (uint8_t), appkey_size, keyfile);
   fclose (keyfile);
 
-  config.application_key = g_appkey;
-  config.application_key_size = g_appkey_size;
+  if (ret != appkey_size) {
+    GST_ERROR_OBJECT (spot, "Failed to read appkey in keyfile %s",
+        GST_SPOT_SRC_SPOTIFY_KEY_FILE (spot));
+    /* FIXME: use ferror to check if eof or read error? */
+    return FALSE;
+  }
+
+  config.application_key = appkey;
+  config.application_key_size = appkey_size;
   config.api_version = SPOTIFY_API_VERSION;
   //FIXME check if these paths are appropiate
   config.cache_location = "tmp";
@@ -367,6 +563,8 @@ static gboolean spotify_create_session (GstSpotSrc *spot)
 
 static gboolean spotify_login (GstSpotSrc *spot)
 {
+  GST_DEBUG_OBJECT (spot, "Starting to login");
+
   sp_error error;
   if (GST_SPOT_SRC_LOGGED_IN (spot)) {
     GST_DEBUG_OBJECT (spot, "Already logged in");
@@ -427,11 +625,13 @@ spotify_thread_func (void *data)
     g_get_current_time (&t);
     g_time_val_add (&t, timeout * 1000);
     g_cond_timed_wait (spot->process_events_cond, spot->process_events_mutex, &t);
+    GST_DEBUG_OBJECT (spot, "Got woke up running spotify commands");
     spot->spotify_thread_initiated = TRUE;
     while (spot->spot_works) {
       struct spot_work *spot_work;
       sp_error error = SP_ERROR_INVALID_INDATA;
       spot_work = (struct spot_work *)spot->spot_works->data;
+      GST_DEBUG_OBJECT (spot, "Running command %d", spot_work->cmd);
       g_mutex_lock (spot_work->spot_mutex);
       switch (spot_work->cmd) {
         case SPOT_CMD_LOGIN:
@@ -538,11 +738,56 @@ spotify_thread_func (void *data)
             error = sp_session_player_seek (GST_SPOT_SRC_SPOTIFY_SESSION (spot), spot_work->opt);
           }
           break;
+        case SPOT_CMD_SEARCH:
+	  {
+	    sp_search *search;
+	    struct spotify_search *s_s = (struct spotify_search *) spot_work->userdata;
+
+	    GST_DEBUG_OBJECT (spot, "Doing a search on %s", s_s->query);
+
+	    search = sp_search_create(GST_SPOT_SRC_SPOTIFY_SESSION (spot), s_s->query,
+				      s_s->artist_index, s_s->artist_nbr, s_s->album_index,
+				      s_s->album_nbr, 0, 0, &spotify_cb_search_complete, s_s);
+
+	    if (!search) {
+	      error = 6;
+	      break;
+	    }
+
+	    error = SP_ERROR_OK;
+	    break;
+	  }
+        case SPOT_CMD_RESOLVE_URI:
+	  {
+	    gchar *resolve_uri = (gchar *) spot_work->userdata;
+	    GST_DEBUG_OBJECT (spot, "Try to resolve uri = %s", resolve_uri);
+	    if (!spotify_login (spot)) {
+	      /* error message from within function */
+	      break;
+	    }
+
+	    sp_link *link = sp_link_create_from_string (resolve_uri);
+
+	    if (!link) {
+	      GST_ERROR_OBJECT (spot, "Incorrect track ID:%s", resolve_uri);
+	      break;
+	    }
+
+	    g_free (GST_SPOT_SRC_RESOLVE_URI_RESULT (spot));
+	    GST_SPOT_SRC_RESOLVE_URI_RESULT(spot) = serialize_link(link);
+
+	    GST_DEBUG_OBJECT (spot, "Success resolved uri = %s", resolve_uri);
+
+	    error = SP_ERROR_OK;
+	    break;
+	  }
         default:
           g_assert_not_reached ();
           break;
 
       }
+
+      GST_DEBUG_OBJECT (spot, "Success run command = %d", spot_work->cmd);
 
       /* print all errors caught and propagate to calling thread */
       if (error != SP_ERROR_OK) {
@@ -551,8 +796,8 @@ spotify_thread_func (void *data)
       spot_work->error = error;
 
       spot->spot_works = g_list_remove (spot->spot_works, spot->spot_works->data);
-      g_mutex_unlock (spot_work->spot_mutex);
       g_cond_broadcast (spot_work->spot_cond);
+      g_mutex_unlock (spot_work->spot_mutex);
     }
   }
 
@@ -661,15 +906,32 @@ gst_spot_src_class_init (GstSpotSrcClass * klass)
       g_param_spec_string ("spotifykeyfile", "Spotify Key File", "Path to spotify key file",
           "unknown", G_PARAM_READWRITE));
 
+  g_object_class_install_property (gobject_class, ARG_SEARCH,
+      g_param_spec_string ("search", "Search", "Spotify string to search on",
+          "unknown", G_PARAM_WRITABLE));
+
+  g_object_class_install_property (gobject_class, ARG_RESOLVE_URI,
+      g_param_spec_string ("resolve-uri", "Resolve URI", "A Spotify URI to resolve",
+          "unknown", G_PARAM_WRITABLE));
+
+  g_object_class_install_property (gobject_class, ARG_RESOLVE_URI_RESULT,
+      g_param_spec_string ("resolve-uri-result", "Resolve URI result", "The resolved URI from resolve",
+          "unknown", G_PARAM_READABLE));
+
   g_object_class_install_property (gobject_class, ARG_BUFFER_TIME,
       g_param_spec_uint64 ("buffer-time", "buffer time in us", "buffer time in us",
-                      0,BUFFER_TIME_MAX,BUFFER_TIME_DEFAULT,
-                      G_PARAM_READWRITE));
+          0 ,BUFFER_TIME_MAX,BUFFER_TIME_DEFAULT,
+          G_PARAM_READWRITE));
 
   gst_spot_signals[SIGNAL_PLAY_TOKEN_LOST] =
       g_signal_new ("play-token-lost", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
-      0, NULL, NULL,
-      g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
+          0, NULL, NULL,
+          g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0);
+
+  gst_spot_signals[SIGNAL_SEARCH_FINISHED] =
+      g_signal_new ("search-finished", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_FIRST,
+           0, NULL, NULL,
+	   g_cclosure_marshal_VOID__STRING, G_TYPE_NONE, 1, G_TYPE_STRING);
 }
 
 static void
@@ -706,6 +968,7 @@ gst_spot_src_init (GstSpotSrc * spot, GstSpotSrcClass * g_class)
   spot->pass = g_strdup (DEFAULT_PASS);
   spot->uri = g_strdup (DEFAULT_URI);
   spot->spotify_key_file = g_strdup (DEFAULT_SPOTIFY_KEY_FILE);
+  spot->resolve_uri_result = g_strdup (DEFAULT_RESOLVE_URI_RESULT);
   spot->logged_in = DEFAULT_LOGGED_IN;
   spot->login_failed = FALSE;
 
@@ -752,6 +1015,7 @@ gst_spot_src_finalize (GObject * object)
   g_free (spot->pass);
   g_free (spot->uri);
   g_free (spot->spotify_key_file);
+  g_free (spot->resolve_uri_result);
 
   g_free (spot->format);
   g_list_free (spot->spot_works);
@@ -790,11 +1054,11 @@ gst_spot_src_set_property (GObject * object, guint prop_id,
       if (g_value_get_boolean (value)) {
         //FIXME error handling
 	guint64 retval;
-        run_spot_cmd (spot, SPOT_CMD_LOGIN, &retval, 0);
+        run_spot_cmd (spot, SPOT_CMD_LOGIN, &retval, 0, NULL);
       } else {
         //FIXME error handling
 	guint64 retval;
-        run_spot_cmd (spot, SPOT_CMD_LOGOUT, &retval, 0);
+        run_spot_cmd (spot, SPOT_CMD_LOGOUT, &retval, 0, NULL);
       }
       break;
     case ARG_URI:
@@ -804,6 +1068,23 @@ gst_spot_src_set_property (GObject * object, guint prop_id,
     case ARG_SPOTIFY_KEY_FILE:
       GST_SPOT_SRC_SPOTIFY_KEY_FILE (spot) = g_value_dup_string (value);
       break;
+    case ARG_SEARCH:
+      {
+	guint64 retval;
+	struct spotify_search *s_s = g_new0 (struct spotify_search, 1);
+	s_s->query = g_value_dup_string (value);
+	s_s->artist_nbr = 100;
+	run_spot_cmd (spot, SPOT_CMD_SEARCH, &retval, 0, s_s);
+	break;
+      }
+    case ARG_RESOLVE_URI:
+      {
+	guint64 retval;
+	gchar *resolve_uri = g_value_dup_string (value);
+	run_spot_cmd (spot, SPOT_CMD_RESOLVE_URI, &retval, 0, resolve_uri);
+	g_free (resolve_uri);
+	break;
+      }
     case ARG_BUFFER_TIME:
       GST_SPOT_SRC_BUFFER_TIME (spot) = (g_value_get_uint64 (value));
       break;
@@ -839,6 +1120,9 @@ gst_spot_src_get_property (GObject * object, guint prop_id, GValue * value,
     case ARG_SPOTIFY_KEY_FILE:
       g_value_set_string (value, GST_SPOT_SRC_SPOTIFY_KEY_FILE (spot));
       break;
+    case ARG_RESOLVE_URI_RESULT:
+      g_value_set_string (value, GST_SPOT_SRC_RESOLVE_URI_RESULT (spot));
+      break;
     case ARG_BUFFER_TIME:
       g_value_set_uint64 (value, GST_SPOT_SRC_BUFFER_TIME (spot));
       break;
@@ -871,7 +1155,7 @@ gst_spot_src_create_read (GstSpotSrc * spot, guint64 offset, guint length, GstBu
         "Perform seek to %" G_GINT64_FORMAT " bytes and %" G_GINT64_FORMAT " usec",
         offset, seek_usec);
 
-    error = run_spot_cmd (spot, SPOT_CMD_SEEK, &retval, seek_usec);
+    error = run_spot_cmd (spot, SPOT_CMD_SEEK, &retval, seek_usec, NULL);
     if (error != SP_ERROR_OK) {
       GST_CAT_ERROR_OBJECT (gst_spot_src_debug_audio, spot, "Seek failed");
       goto create_seek_failed;
@@ -881,7 +1165,7 @@ gst_spot_src_create_read (GstSpotSrc * spot, guint64 offset, guint length, GstBu
     gst_adapter_clear (GST_SPOT_SRC_ADAPTER (spot));
     g_mutex_unlock (GST_SPOT_SRC_ADAPTER_MUTEX (spot));
 
-    error = run_spot_cmd (spot, SPOT_CMD_PLAY, &retval, 0);
+    error = run_spot_cmd (spot, SPOT_CMD_PLAY, &retval, 0, NULL);
     if (error != SP_ERROR_OK) {
       GST_CAT_ERROR_OBJECT (gst_spot_src_debug_audio, spot, "Play failed");
       goto create_seek_failed;
@@ -935,7 +1219,7 @@ gst_spot_src_create (GstBaseSrc * basesrc, guint64 offset, guint length, GstBuff
   spot = GST_SPOT_SRC (basesrc);
 
   if (spot->play_token_lost) {
-    error = run_spot_cmd (spot, SPOT_CMD_PLAY, &retval, 0);
+    error = run_spot_cmd (spot, SPOT_CMD_PLAY, &retval, 0, NULL);
     if (error != SP_ERROR_OK) {
       GST_CAT_ERROR_OBJECT (gst_spot_src_debug_audio, spot, "Playtokenlost play failed");
       return error;
@@ -990,7 +1274,7 @@ gst_spot_src_query (GstBaseSrc * basesrc, GstQuery * query)
 
       gst_query_parse_duration (query, &format, &value);
       /* duration in ms */
-      error = run_spot_cmd (spot, SPOT_CMD_DURATION, &duration, 0);
+      error = run_spot_cmd (spot, SPOT_CMD_DURATION, &duration, 0, NULL);
       if (error != SP_ERROR_OK) {
         GST_CAT_ERROR_OBJECT (gst_spot_src_debug_audio, spot, "Query duration play failed");
         ret = FALSE;
@@ -1151,7 +1435,7 @@ gst_spot_src_get_size (GstBaseSrc * basesrc, guint64 * size)
 
   spot = GST_SPOT_SRC (basesrc);
   /* duration in ms */
-  error = run_spot_cmd (spot, SPOT_CMD_DURATION, &duration, 0);
+  error = run_spot_cmd (spot, SPOT_CMD_DURATION, &duration, 0, NULL);
   if (error != SP_ERROR_OK) {
     GST_CAT_ERROR_OBJECT (gst_spot_src_debug, spot, "Query duration play failed");
     goto no_duration;
@@ -1183,7 +1467,7 @@ gst_spot_src_start (GstBaseSrc * basesrc)
   GstSpotSrc *spot = (GstSpotSrc *) basesrc;
 
   GST_DEBUG_OBJECT (spot, "Start");
-  error = run_spot_cmd (spot, SPOT_CMD_START, &retval, 0);
+  error = run_spot_cmd (spot, SPOT_CMD_START, &retval, 0, NULL);
   if (error != SP_ERROR_OK) {
     GST_CAT_ERROR_OBJECT (gst_spot_src_debug, spot, "Start failed");
     return FALSE;
@@ -1203,7 +1487,7 @@ gst_spot_src_stop (GstBaseSrc * basesrc)
   GST_DEBUG_OBJECT (spot, "Stop");
   spot = GST_SPOT_SRC (basesrc);
 
-  error = run_spot_cmd (spot, SPOT_CMD_STOP, &retval, 0);
+  error = run_spot_cmd (spot, SPOT_CMD_STOP, &retval, 0, NULL);
   if (error != SP_ERROR_OK) {
     GST_CAT_ERROR_OBJECT (gst_spot_src_debug, spot, "Stop failed");
     return FALSE;

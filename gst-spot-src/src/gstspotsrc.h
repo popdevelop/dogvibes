@@ -57,6 +57,17 @@ enum spot_cmd
   SPOT_CMD_PROCESS,
   SPOT_CMD_DURATION,
   SPOT_CMD_SEEK,
+  SPOT_CMD_SEARCH,
+  SPOT_CMD_RESOLVE_URI,
+};
+
+struct spotify_search
+{
+  gchar *query;
+  gint artist_nbr;
+  gint artist_index;
+  gint album_nbr;
+  gint album_index;
 };
 
 struct spot_work
@@ -66,6 +77,7 @@ struct spot_work
   int retval;
   sp_error error;
   gint64 opt;
+  void *userdata;
   enum spot_cmd cmd;
 };
 
@@ -74,6 +86,7 @@ struct spot_work
 #define GST_SPOT_SRC_URI(src) ((src)->uri)
 #define GST_SPOT_SRC_LOGGED_IN(o) ((o)->logged_in)
 #define GST_SPOT_SRC_SPOTIFY_KEY_FILE(src) ((src)->spotify_key_file)
+#define GST_SPOT_SRC_RESOLVE_URI_RESULT(src) ((src)->resolve_uri_result)
 #define GST_SPOT_SRC_URI_LOCATION(src) (gst_uri_get_location ((src)->uri))
 #define GST_SPOT_SRC_BUFFER_TIME(src) ((src)->buffer_time)
 #define GST_SPOT_SRC_ADAPTER(src) ((src)->adapter)
@@ -100,6 +113,7 @@ struct _GstSpotSrc {
   gboolean logged_in;
   gboolean login_failed;
   gchar *spotify_key_file;
+  gchar *resolve_uri_result;
   guint64 read_position;
   guint64 buffer_time;
   GstAdapter *adapter;
@@ -118,6 +132,7 @@ struct _GstSpotSrc {
   gboolean unlock_state;
   sp_track *current_track;
   sp_session *spotify_session;
+  
 };
 
 struct _GstSpotSrcClass {
