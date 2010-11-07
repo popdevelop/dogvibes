@@ -1,2 +1,0 @@
-#!/bin/sh
-LD_LIBRARY_PATH=/home/gyllen/X11bin/lib ./server
