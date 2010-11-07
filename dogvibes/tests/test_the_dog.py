@@ -34,6 +34,13 @@ class testTheDog(unittest.TestCase):
         dcall("stop")
         dcall("cleandatabase")
 
+class testSearching(testTheDog):
+    def setUp(self):
+        pass
+
+    def test_search(self):
+        pass
+
 class testUserHandling(testTheDog):
     def setUp(self):
         pass
@@ -45,10 +52,16 @@ class testPlaylist(testTheDog):
     def setUp(self):
         pass
 
+    def test_listing(self):
+        pass
+
     def test_addingremoving(self):
         pass
 
     def test_skipping(self):
+        pass
+
+    def test_change_active_list(self):
         pass
 
 class testVoting(testTheDog):
@@ -57,6 +70,14 @@ class testVoting(testTheDog):
 
     def test_vote_count(self):
         pass
+
+class testSkippingAndJumping(testTheDog):
+    def setUp(self):
+        pass
+
+    def test_playingpausingskipping(self):
+        pass
+
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
