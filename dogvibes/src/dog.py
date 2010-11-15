@@ -59,10 +59,8 @@ def register_dog():
         print 'Unknown error when registering client'
 
 def push_status():
-    amp = dogvibes.amps[0]
-    if amp.needs_push_update or dogvibes.needs_push_update:
-        data = amp.get_status()
-        amp.needs_push_update = False
+    if dogvibes.needs_push_update:
+        data = dogvibes.get_status()
         dogvibes.needs_push_update = False
         return_data('0', data, 0, False, 'pushHandler', None, True)
 
@@ -117,28 +115,23 @@ def run_command(nbr, command, user, avatar_url):
     request = DogRequest(command, nbr, user, avatar_url, msg_id, js_callback)
 
     try:
-#    if True:
-        if (len(c) < 3):
+        if (len(c) < 2):
             raise NameError("Malformed command: %s" % u.path)
 
         method = 'API_' + c[-1]
          # TODO: this should be determined on API function return:
         raw = method == 'API_getAlbumArt'
 
-        obj = c[1]
-        #id = c[2]
-        id = 0 # TODO: remove when more amps are supported
+        print c[0]
 
-        if obj == 'dogvibes':
-            klass = dogvibes
-        elif obj == 'amp':
-            klass = dogvibes.amps[id]
-        else:
-            raise NameError("No such object '%s'" % obj)
+        klass = dogvibes
 
         # strip params from paramters not in the method definition
         args = inspect.getargspec(getattr(klass, method))[0]
         params = dict(filter(lambda k: k[0] in args, params.items()))
+
+        if (c[1] == "playlist"):
+            params['playlistid'] = c[2]
 
         for p in params:
             if not isinstance(params[p], str):

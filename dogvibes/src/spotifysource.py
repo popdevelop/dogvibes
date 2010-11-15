@@ -18,24 +18,6 @@ class SpotifySource:
         self.tracks = []
         self.condition = threading.Condition()
         self.lock = threading.Lock()
-
-    def __getstate__(self):
-        odict = self.__dict__.copy()
-        del odict['spotify']
-        del odict['bin']
-        del odict['amp']
-        del odict['condition']
-        del odict['lock']
-        del odict['tracks']
-        return odict
-
-    def __setstate__(self, dict):
-        self.__dict__.update(dict)   # update attributes
-        self.created = False
-        self.amp = None
-        self.condition = threading.Condition()
-        self.lock = threading.Lock()
-        self.tracks = []
         self.get_src()
 
     @classmethod
@@ -55,7 +37,7 @@ class SpotifySource:
         resolved_uri = self.spotify.get_property("resolve-uri-result")
         self.lock.release()
         fetched_track = eval(resolved_uri)[0]
-        
+
         title = fetched_track['title'].encode('raw_unicode_escape').decode('utf-8')
         artist = fetched_track['artist'].encode('raw_unicode_escape').decode('utf-8')
         album = fetched_track['album'].encode('raw_unicode_escape').decode('utf-8')
@@ -171,9 +153,12 @@ class SpotifySource:
         self.condition.release()
 
     def search(self, query):
+        print "huja"
         self.condition.acquire()
         self.spotify.set_property("search", query.encode('utf-8'))
+        print "wait"
         self.condition.wait()
+        print "vave"
         self.condition.release()
         return self.tracks
 

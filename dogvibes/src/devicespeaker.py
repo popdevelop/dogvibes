@@ -40,6 +40,7 @@ class DeviceSpeaker:
         return self.bin
 
     def get_volume(self):
+        self.get_speaker()
         return self.volume.get_property("volume")
 
     def set_volume(self, level):
