@@ -30,6 +30,10 @@ def vote_all_tracks_to_playlist(playlist):
     for v in valid_uris:
         dcall("playlist/%s/vote?uri=%s" % (playlist, v['uri']))
 
+def unvote_all_tracks_in_playlist(playlist):
+    for v in valid_uris:
+        dcall("playlist/%s/unvote?uri=%s" % (playlist, v['uri']))
+
 def vote_some_tracks_to_playlist(playlist, nbr):
     i = 0
     for v in valid_uris:
@@ -48,7 +52,8 @@ def dcall_full(call, expect_exception):
     dbg("-------------------------------")
     dbg("calling: %s" % call)
 
-    ret = simplejson.load(urllib.urlopen(call))
+    ret = urllib.urlopen(call)
+    ret = simplejson.load(ret)
     if ret['error'] != 0 and not expect_exception:
         raise Exception()
     elif ret['error'] != 0 and expect_exception:
@@ -160,23 +165,106 @@ class testVoting(testTheDog):
         for pn in self.pnames:
             dcall("addplaylist?name=%s" % pn)
 
-    def test_vote_count(self):
+    def test_easy_vote(self):
         vote_all_tracks_to_playlist(1)
-        dcall("play")
 
-#class testAddRemoveTrack(testTheDog):
-#    def setUp(self):
-#        dcall("stop")
-#        dcall("cleandatabase")
-#        self.pnames = ["test1", "test2", "test3", "test4", "test5"]
+    def test_vote_unvote(self):
+        dbg("Test voting by voting all and then unvoting all")
+        #tracks = dcall("playlist/1/tracks")
+        #for t in tracks:
+        #    self.assertTrue(int(t['votes'] == 0))
+        vote_all_tracks_to_playlist(1)
+        #tracks = dcall("playlist/1/tracks")
+        #for t in tracks:
+        #    self.assertTrue(int(t['votes'] == 1))
+        unvote_all_tracks_in_playlist(1)
+        #tracks = dcall("playlist/1/tracks")
+        #for t in tracks:
+        #    self.assertTrue(int(t['votes'] == 0))
+
+#    def test_vote_count(self):
+#        # check integrety
+#        res = amp("getUserInfo")
+#        self.assertTrue(res['votes'] == 0, "Incorrect vote count")
 #
-#        dbg("adding test playlists")
-#        for pn in self.pnames:
-#            dcall("addplaylist?name=%s" % pn)
+#        # add five more votes
+#        for i in range(0,5):
+#            amp("addVote?uri=%s" % valid_uris[7]['uri'])
 #
-#    def remove_track(self):
-#        vote_some_tracks_to_playlist(1, 3)
-#        dcall("playlist/%d/tracks")
+#        # remove five wrong votes
+#        for i in range(0,5):
+#            amp("removeVote?uri=%s" % valid_uris[7]['uri'])
+#
+#        # check integrety
+#        res = amp("getUserInfo")
+#        self.assertTrue(res['votes'] == 0, "Incorrect vote count")
+#
+#        # remove five correct votes
+#        for i in range(0,5):
+#            amp("removeVote?uri=%s" % valid_uris[i]['uri'])
+#
+#        # check integrety
+#        res = amp("getUserInfo")
+#        self.assertTrue(res['votes'] == 5, "not all votes given back correctly")
+#
+#    def test_voting_positions(self):
+#        # add one vote for gyllen
+#        amp("addVote?uri=%s&user=gyllen" % valid_uris[0]['uri'])
+#        res = amp("getUserInfo?user=gyllen")
+#
+#        amp("play")
+#
+#        # check integrity
+#        self.assertTrue(res['votes'] == 4, "Incorrect vote count")
+#        amp("addVote?uri=%s&user=gyllen" % valid_uris[4]['uri'])
+#
+#        list = amp("getAllTracksInQueue")
+#        self.assertTrue(list[1]['uri'] == valid_uris[4]['uri'], "Inconsistency on moving tracks with voting")
+#        res = amp("getUserInfo?user=gyllen")
+#        # check integrity
+#        print res
+#        self.assertTrue(res['votes'] == 3, "Incorrect vote count user has %s votes" % res['votes'])
+#        amp("nextTrack")
+#        res = amp("getUserInfo?user=gyllen")
+#        print res
+#        # check integrity
+#        self.assertTrue(res['votes'] == 4, "Incorrect vote count user has %s votes" % res['votes'])
+#
+#        amp("pause")
+#
+class testVoteRemoveTrack(testTheDog):
+    def setUp(self):
+        dcall("stop")
+        dcall("cleandatabase")
+        self.pnames = ["test1"]
+
+        dbg("adding test playlists")
+        for pn in self.pnames:
+            dcall("addplaylist?name=%s" % pn)
+
+    def test_remove_track(self):
+        plist = dcall("playlists")
+        plid = plist[0]['id']
+
+        vote_some_tracks_to_playlist(plid, 3)
+
+        info = dcall("info")
+        votes = info['votes']
+        tracks = dcall("playlist/%d/tracks" % plid)
+        dbg("Try removing tracks from playlist")
+        dcall("playlist/%d/removetrack?track_id=%d" % (plid, tracks[0]['id']))
+        ntracks = dcall("playlist/%d/tracks" % plid)
+
+        dbg("Check that votes has been returned")
+        info = dcall("info")
+        self.assertTrue(int(votes) == int(info['votes']) - 1)
+
+        dbg("Check that track was removed")
+        for n in ntracks:
+            self.assertTrue(n['id'] != tracks[0]['id'])
+
+        dbg("Try to remove none existant track")
+        dcall_full("playlist/%d/removetrack?track_id=%d" % (plid, tracks[0]['id']), True)
 
 class testSkippingAndJumping(testTheDog):
     plid = -1
@@ -207,7 +295,7 @@ class testSkippingAndJumping(testTheDog):
 
 
     def test_playingpausingskipping(self):
-        test_nbr = 50
+        test_nbr = 5
 
         dbg("playing and pausing for a while (%d play and pausing)" % test_nbr)
         for i in range(0,test_nbr):

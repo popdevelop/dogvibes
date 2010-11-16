@@ -131,7 +131,9 @@ class Dogvibes():
         request.finish(album)
 
     def next_track(self):
-        logging.debug("implement me")
+        self.set_state(gst.STATE_NULL)
+        self.remove_track(None, self.fetch_active_track().id)
+        self.start_track(self.fetch_active_track())
 
     def pipeline_message(self, bus, message):
         t = message.type
@@ -219,7 +221,10 @@ class Dogvibes():
         return playlist.tracks.all()[0]
 
     def remove_track(self, playlist_id, track_id):
-        Entry.objects.get(id=track_id).delete()
+        try:
+            Entry.objects.get(id=track_id).delete()
+        except:
+            raise ValueError, 'Track does not exist'
 
     def get_played_milliseconds(self):
         (pending, state, timeout) = self.pipeline.get_state ()
@@ -338,10 +343,10 @@ class Dogvibes():
         request.push({'vote_version': self.vote_version})
         request.finish()
 
-    def API_unvote(self, uri, request):
+    def API_unvote(self, playlistid, uri, request):
         user, created = User.objects.get_or_create(username=request.user, defaults={'avatar_url': request.avatar_url})
         track = self.create_tracks_from_uri(uri)[0]
-        playqueue = Playlist.objects.get(id=self.tmpqueue_id)
+        playqueue = Playlist.objects.get(id=playlistid)
 
         # Get the first matching track if several with the same URI
         # NOTE: this will possibly choose the wrong track if several tracks
@@ -370,9 +375,7 @@ class Dogvibes():
 
     def API_removetrack(self, playlistid, track_id, request):
         track_id = int(track_id)
-
-        remove_track(playlistid, track_id)
-
+        self.remove_track(playlistid, track_id)
         self.needs_push_update = True
         self.playlist_version += 1
         self.vote_version += 1
@@ -406,10 +409,15 @@ class Dogvibes():
             ps = Playlist.objects.get(id=playlistid)
         except:
             raise ValueError, 'Playlist does not exist'
-        self.active_playlist = ps
+
+        # stop playback when list is changed
+        if ps != self.active_playlist:
+            self.set_state(gst.STATE_NULL)
+            request.push({'state': 'stopped'})
+            self.active_playlist = ps
         request.finish()
 
-    def API_getAllTracksInPlaylist(self, playlistid, request):
+    def API_tracks(self, playlistid, request):
         # TODO: I don't know how to join these automatically
         tracks = []
         for entry in Playlist.objects.get(id=playlistid).entry_set.all():
@@ -474,7 +482,7 @@ class Dogvibes():
         self.vote_version += 1
         request.push({'playlist_id': self.fetch_active_playlist().id})
         request.push({'state': self.get_state()})
-        request.push(self.track_to_client())
+        #request.push(self.track_to_client())
         request.finish()
 
     # SKIPPING AND JUMPING STUFF ENDS HERE -------------------------------------------------
@@ -505,7 +513,7 @@ class Dogvibes():
             activities.append(a)
         request.finish(activities)
 
-    def API_getUserInfo(self, request):
+    def API_info(self, request):
         user, created = User.objects.get_or_create(username=request.user,
                                                    defaults={'avatar_url': request.avatar_url})
         ret = model_to_dict(user)

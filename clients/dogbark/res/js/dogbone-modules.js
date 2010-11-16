@@ -3,7 +3,7 @@
  */
 
 var Config = {
-  defaultUser: "sswc",
+  defaultUser: "gyllen",
   defaultServer: "dogvib.es",
   defaultProtocol: ["http", "http"], //Order to try protocols
   maxActivity: 10

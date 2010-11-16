@@ -181,14 +181,14 @@ window.Dogvibes =  {
   serverURL: false,
   dogtag: "anonymous",
   status: {},
-  defAmp: "/amp/0" , /* TODO: dynamic */
+  defAmp: "" , /* TODO: dynamic */
   /* Translation table protocol -> connection object */
   protHandlers: {
     ws: WSocket,
     http: AJAX
   },
   cmd: {
-    status: "/getStatus",
+    status: "/status",
     prev:   "/previousTrack",
     play:   "/play",
     playTrack: "/playTrack?nbr=",
@@ -212,16 +212,16 @@ window.Dogvibes =  {
     createPlaylist: "/dogvibes/createPlaylist?name=",
     removePlaylist: "/dogvibes/removePlaylist?id=",
     renamePlaylist: "/dogvibes/renamePlaylist?playlist_id=",
-    playqueue: "/getAllTracksInQueue",
-    search: "/dogvibes/search?query=",
-    setVolume: "/setVolume?level=",
+    playqueue: "/playlist/1/tracks",
+    search: "/search?q=",
+    setVolume: "/volume?level=",
     getAlbums: "/dogvibes/getAlbums?query=",
     getAlbum: "/dogvibes/getAlbum?album_uri=",
     getPlayedMilliSecs: "/dogvibes/getPlayedMilliSeconds",
-    vote: "/addVote?uri=",
-    unVote: "/removeVote?uri=",
+    vote: "/playlist/1/vote?uri=",
+    unVote: "/playlist/1/unvote?uri=",
     getActivity: "/getActivity?limit=",
-    getUserInfo: "/getUserInfo",
+    getUserInfo: "/info",
     getLoginInfo: "/getLoginInfo"
   },
   /*****************
