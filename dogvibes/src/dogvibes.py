@@ -56,13 +56,6 @@ class Dogvibes():
         # create sources struct
         self.sources = {}
 
-        # add all speakers, should also be stored in database as sources
-        self.speakers = [DeviceSpeaker("devicesink"), FakeSpeaker("fakespeaker")]
-
-        spot_user = cfg["SPOTIFY_USER"]
-        spot_pass = cfg["SPOTIFY_PASS"]
-        self.modify_spotifysource(spot_user, spot_pass)
-
         # create gstreamer stuff
         self.pipeline = gst.Pipeline("dogvibespipeline")
 
@@ -78,11 +71,19 @@ class Dogvibes():
         # the gstreamer source that is currently used for playback
         self.src = None
 
+        # add all speakers, should also be stored in database as sources
+        self.speakers = [DeviceSpeaker("devicesink"), FakeSpeaker("fakespeaker")]
+        # assume first speaker is device speaker
+        self.connect_speaker(0)
+
+        spot_user = cfg["SPOTIFY_USER"]
+        spot_pass = cfg["SPOTIFY_PASS"]
+        self.modify_spotifysource(spot_user, spot_pass)
+
         # playlist stuff
-        self.active_playlist_id = None
         self.vote_version = 0
         self.playlist_version = 0
-
+        self.active_playlist = None
 
     def create_tracks_from_uri(self, uri):
         tracks = []
@@ -93,26 +94,11 @@ class Dogvibes():
                     return tracks
         raise ValueError('Could not create track from URI')
 
-    def modify_spotifysource(self, username, password):
-        if self.sources.has_key("spotify"):
-            self.sources["spotify"].relogin(username, password)
-        else:
-            spotifysource = SpotifySource("spotify", username, password)
-            self.sources["spotify"] = spotifysource
-
-    def modify_srradiosource(self):
-        if self.sources.has_key("srradiosource"):
-            pass
-        else:
-            srradiosource = SRRadioSource("srradio")
-            self.sources["srradio"] = srradiosource
-            self.sources.sync()
-
-    def get_all_tracks_in_playlist(self, playlist_id):
+    def get_all_tracks_in_playlist(self, playlistid):
         try:
-            playlist = Playlist.get(playlist_id)
+            playlist = Playlist.get(playlistid)
         except ValueError as e:
-            raise
+            raise ValueError, 'Playlist does not exist'
         tracks = playlist.get_all_tracks()
         ret = [track.__dict__ for track in tracks]
         return ret
@@ -136,9 +122,6 @@ class Dogvibes():
         except ValueError as e:
             request.finish(AlbumArt.get_standard_image(size), raw = True)
 
-    def create_playlist(self, name):
-        Playlist.create(name)
-
     def get_album(self, album_uri, request):
         album = None
         for name, source in self.sources.iteritems():
@@ -147,59 +130,14 @@ class Dogvibes():
                 break
         request.finish(album)
 
-    def connect_source(self, name):
-        if not self.sources.has_key(name):
-            logging.warning ("Connect source - source does not exist")
-            return
-
-        if self.sources[name].amp != None:
-            logging.warning ("Connect source - source is already connected to amp")
-            return
-
-        # Add amp as owner of source
-        self.sources[name] = name
-        self.sources.sync()
-
-    def disconnect_source(self, name):
-        if not self.sources.has_key(name):
-            logging.warning ("Connect source - source does not exist")
-            return
-
-        if self.dogvibes.sources[name].amp == None:
-            logging.warning ("Source has no owner")
-            return
-
-        if self.dogvibes.sources[name].amp != self:
-            logging.warning ("Amp not owner of this source")
-            return
-
-        del self.sources[name]
-        self.sources.sync()
-
-    def connect_speaker(self, nbr, request = None):
-        nbr = int(nbr)
-        if nbr > len(self.dogvibes.speakers) - 1:
-            logging.warning("Connect speaker - speaker does not exist")
-
-        speaker = self.dogvibes.speakers[nbr]
-
-        if self.pipeline.get_by_name(speaker.name) == None:
-            self.sink = self.dogvibes.speakers[nbr].get_speaker()
-            self.pipeline.add(self.sink)
-            self.tee.link(self.sink)
-        else:
-            logging.debug("Speaker %d already connected" % nbr)
-
-
-    def change_track(self, tracknbr, relative):
-        tracknbr = int(tracknbr)
-        logging.debug("Change to track %d", tracknbr, relative)
+    def next_track(self):
+        logging.debug("implement me")
 
     def pipeline_message(self, bus, message):
         t = message.type
         if t == gst.MESSAGE_EOS:
             logging.debug ("Song is over changing track.")
-            self.change_track(1, True)
+            self.next_track()
             self.playlist_version += 1
             self.vote_version += 1
             self.needs_push_update = True
@@ -270,19 +208,18 @@ class Dogvibes():
         return res
 
     def fetch_active_playlist(self):
-        # FIXME
-        return Playlist.objects.get(id=1)
+        if (self.active_playlist == None):
+            self.active_playlist = Playlist.objects.all()[0]
+        return self.active_playlist
 
     def fetch_active_track(self):
-        # Assume that fetch active playlist alreay been run
         playlist = self.fetch_active_playlist()
-
         if playlist.tracks.count() <= 0:
             return None
-
-        print playlist.tracks.all()[0]
-
         return playlist.tracks.all()[0]
+
+    def remove_track(self, playlist_id, track_id):
+        Entry.objects.get(id=track_id).delete()
 
     def get_played_milliseconds(self):
         (pending, state, timeout) = self.pipeline.get_state ()
@@ -309,7 +246,7 @@ class Dogvibes():
 
         playlist = self.fetch_active_playlist()
 
-        status['playlist_id'] = self.active_playlist_id
+        status['playlist_id'] = self.fetch_active_playlist().id
         status['vote_version'] = self.vote_version
 
         track = self.fetch_active_track()
@@ -356,40 +293,6 @@ class Dogvibes():
             playing.insert_at(0)
 
     # API
-
-    def API_connectSource(self, name, request):
-        self.connect_source(name)
-        request.finish(name)
-
-    def API_disconnectSource(self, name, request):
-        self.disconnect_source(name)
-        request.finish(name)
-
-    def API_connectSpeaker(self, nbr, request):
-        self.connect_speaker(nbr)
-        request.finish()
-
-    def API_disconnectSpeaker(self, nbr, request):
-        nbr = int(nbr)
-        if nbr > len(self.speakers) - 1:
-            logging.warning("disconnect speaker - speaker does not exist")
-
-        speaker = self.speakers[nbr]
-
-        if self.pipeline.get_by_name(speaker.name) != None:
-            (pending, state, timeout) = self.pipeline.get_state()
-            self.set_state(gst.STATE_NULL)
-            rm = self.pipeline.get_by_name(speaker.name)
-            self.pipeline.remove(rm)
-            self.tee.unlink(rm)
-            self.set_state(state)
-        else:
-            logging.warning ("disconnect speaker - speaker not found")
-        request.finish()
-
-    def API_modifySpotifySource(self, username, password, request):
-        self.modify_spotifysource(username, password)
-        request.finish()
 
     # PLAYSLIST STUFF BEGINS HERE -------------------------------------------------
 
@@ -465,22 +368,73 @@ class Dogvibes():
         request.push({'vote_version': self.vote_version})
         request.finish()
 
-    def API_removeTrack(self, track_id, request):
+    def API_removetrack(self, playlistid, track_id, request):
         track_id = int(track_id)
 
-        # For now if we are trying to remove the existing playing track. Do nothing.
-        if (track_id == self.active_playlist_id):
-            logging.warning("Not allowed to remove playing track")
-            request.finish(error = 3)
-            return
+        remove_track(playlistid, track_id)
 
-        Entry.objects.get(id=track_id).delete()
         self.needs_push_update = True
-
         self.playlist_version += 1
         self.vote_version += 1
         request.push({'vote_version': self.vote_version})
         request.finish()
+
+    def API_addplaylist(self, name, request):
+        Playlist.objects.create(name=name)
+        request.finish()
+
+    def API_remove(self, playlistid, request):
+        try:
+            playlist = Playlist.objects.get(id=playlistid)
+        except:
+            raise ValueError, 'Playlist does not exist'
+
+        if (playlist.id == self.fetch_active_playlist().id):
+            raise ValueError, 'Not allowed to remove active playlist'
+
+        playlist.tracks.clear()
+        playlist.delete()
+        self.needs_push_update = True
+        request.finish()
+
+    def API_playlists(self, request):
+        ps = [model_to_dict(p) for p in Playlist.objects.all()]
+        request.finish(ps)
+
+    def API_setactive(self, playlistid, request):
+        try:
+            ps = Playlist.objects.get(id=playlistid)
+        except:
+            raise ValueError, 'Playlist does not exist'
+        self.active_playlist = ps
+        request.finish()
+
+    def API_getAllTracksInPlaylist(self, playlistid, request):
+        # TODO: I don't know how to join these automatically
+        tracks = []
+        for entry in Playlist.objects.get(id=playlistid).entry_set.all():
+            t = model_to_dict(entry.track)
+            t["id"] = entry.id # use the unique id instead of track_id
+            tracks.append(t)
+        request.finish(tracks)
+
+    def API_rename(self, playlistid, name, request):
+        try:
+            p = Playlist.objects.get(id=playlistid)
+            p.name = name
+            p.save()
+        except:
+            raise ValueError, 'Playlist does not exist'
+        self.needs_push_update = True
+        request.finish()
+
+    def API_list(self, request):
+        print "please implement me"
+        request.finish()
+
+    # PLAYSLIST STUFF ENDS HERE -------------------------------------------------
+
+    # SKIPPING AND JUMPING STUFF STARTS HERE -------------------------------------------------
 
     def API_seek(self, mseconds, request):
         if self.src == None:
@@ -515,24 +469,28 @@ class Dogvibes():
             request.finish()
 
     def API_next(self, request):
-        self.change_track(1, True)
+        self.next_track()
         self.playlist_version += 1
         self.vote_version += 1
-        request.push({'playlist_id': self.active_playlist_id})
+        request.push({'playlist_id': self.fetch_active_playlist().id})
         request.push({'state': self.get_state()})
         request.push(self.track_to_client())
         request.finish()
 
-    def API_getPlayedMilliSeconds(self, request):
+    # SKIPPING AND JUMPING STUFF ENDS HERE -------------------------------------------------
+
+    # STATUS STUFF STARTS HERE -------------------------------------------------
+
+    def API_playedmilliseconds(self, request):
         request.finish(self.get_played_milliseconds())
 
-    def API_getStatus(self, request):
+    def API_status(self, request):
         request.finish(self.get_status())
 
-    def API_setVolume(self, level, request):
+    def API_volume(self, level, request):
         level = float(level)
         if (level > 1.0 or level < 0.0):
-            raise DogError, 'Volume must be between 0.0 and 1.0'
+            raise ValueError, 'Volume must be between 0.0 and 1.0'
         self.speakers[0].set_volume(level)
         request.push({'volume': self.speakers[0].get_volume()})
         request.finish()
@@ -560,6 +518,10 @@ class Dogvibes():
         ret["voted_tracks"] = voted_tracks
         request.finish(ret)
 
+    # STATUS STUFF ENDS HERE -------------------------------------------------
+
+    # ALBUM STUFF STARTS HERE -------------------------------------------------
+
     def API_getAlbums(self, query, request):
         ret = []
         for name, source in self.sources.iteritems():
@@ -575,65 +537,17 @@ class Dogvibes():
         threading.Thread(target=self.fetch_albumart,
                          args=(artist, album, size, request)).start()
 
-    def API_addplaylist(self, name, request):
-        Playlist.objects.create(name=name)
-        request.finish()
+    # ALBUM STUFF ENDS HERE -------------------------------------------------
 
-    def API_removePlaylist(self, id, request):
-        playlist = Playlist.objects.get(id=id)
-        playlist.tracks.clear() # TODO: check this!
-        playlist.delete()
-        self.needs_push_update = True
-        request.finish()
-
-    def API_addTracksToPlaylist(self, playlist_id, uri, request):
-        tracks = self.create_tracks_from_uri(uri)
-        try:
-            playlist = Playlist.objects.get(id=playlist_id)
-        except:
-            raise
-        self.needs_push_update = True
-
-        for track in tracks:
-            Entry.objects.create(playlist=playlist, track=track)
-        request.finish()
-
-    def API_removeTracksFromPlaylist(self, playlist_id, track_ids, request):
-        print "not implemented 2"
-        request.finish()
-
-    def API_playlists(self, request):
-        ps = [model_to_dict(p) for p in Playlist.objects.all()]
-        request.finish(ps)
-
-    def API_getAllTracksInPlaylist(self, playlist_id, request):
-        # TODO: I don't know how to join these automatically
-        tracks = []
-        for entry in Playlist.objects.get(id=playlist_id).entry_set.all():
-            t = model_to_dict(entry.track)
-            t["id"] = entry.id # use the unique id instead of track_id
-            tracks.append(t)
-        request.finish(tracks)
-
-    def API_renamePlaylist(self, playlist_id, name, request):
-        try:
-            # TODO: is there a "update" method?
-            p = Playlist.objects.get(id=playlist_id)
-            p.name = name
-            p.save()
-        #except ValueError as e:
-        except:
-            raise
-        self.needs_push_update = True
-        request.finish()
-
-    # PLAYSLIAST STUFF ENDS HERE -------------------------------------------------
+    # SEARCH STUFF STARTS HERE  -------------------------------------------------
 
     def API_search(self, q, request):
         threading.Thread(target=self.do_search, args=(q, request)).start()
 
     def API_getSearchHistory(self, nbr, request):
         request.finish(self.search_history[-int(nbr):])
+
+    # SEARCH STUFF ENDS HERE  -------------------------------------------------
 
     # DEBUG STUFF STARTS HERE -------------------------------------------------
 
@@ -648,3 +562,54 @@ class Dogvibes():
         request.finish()
 
     # DEBUG STUFF ENDS HERE -------------------------------------------------
+
+    # MISC SOURCE STUFF STARTS HERE -------------------------------------------------
+
+    def connect_speaker(self, nbr, request = None):
+        nbr = int(nbr)
+        if nbr > len(self.speakers) - 1:
+            logging.warning("Connect speaker - speaker does not exist")
+
+        speaker = self.speakers[nbr]
+
+        if self.pipeline.get_by_name(speaker.name) == None:
+            self.sink = self.speakers[nbr].get_speaker()
+            self.pipeline.add(self.sink)
+            self.tee.link(self.sink)
+        else:
+            logging.debug("Speaker %d already connected" % nbr)
+
+    def modify_spotifysource(self, username, password):
+        if self.sources.has_key("spotify"):
+            self.sources["spotify"].relogin(username, password)
+        else:
+            spotifysource = SpotifySource("spotify", username, password)
+            self.sources["spotify"] = spotifysource
+
+    def API_connectSpeaker(self, nbr, request):
+        self.connect_speaker(nbr)
+        request.finish()
+
+    def API_disconnectSpeaker(self, nbr, request):
+        nbr = int(nbr)
+        if nbr > len(self.speakers) - 1:
+            logging.warning("disconnect speaker - speaker does not exist")
+
+        speaker = self.speakers[nbr]
+
+        if self.pipeline.get_by_name(speaker.name) != None:
+            (pending, state, timeout) = self.pipeline.get_state()
+            self.set_state(gst.STATE_NULL)
+            rm = self.pipeline.get_by_name(speaker.name)
+            self.pipeline.remove(rm)
+            self.tee.unlink(rm)
+            self.set_state(state)
+        else:
+            logging.warning ("disconnect speaker - speaker not found")
+        request.finish()
+
+    def API_modifySpotifySource(self, username, password, request):
+        self.modify_spotifysource(username, password)
+        request.finish()
+
+    # MISC SOURCE STUFF ENDS HERE -------------------------------------------------

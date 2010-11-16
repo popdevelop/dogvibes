@@ -30,15 +30,31 @@ def vote_all_tracks_to_playlist(playlist):
     for v in valid_uris:
         dcall("playlist/%s/vote?uri=%s" % (playlist, v['uri']))
 
+def vote_some_tracks_to_playlist(playlist, nbr):
+    i = 0
+    for v in valid_uris:
+        dcall("playlist/%s/vote?uri=%s" % (playlist, v['uri']))
+        i = i + 1
+        if i >= nbr:
+            return
+
+
 def dcall(call):
+    return dcall_full(call, False)
+
+def dcall_full(call, expect_exception):
     call = "http://dogvib.es/%s/%s" % (user, call)
 
     dbg("-------------------------------")
     dbg("calling: %s" % call)
 
     ret = simplejson.load(urllib.urlopen(call))
-    if ret['error'] != 0:
+    if ret['error'] != 0 and not expect_exception:
         raise Exception()
+    elif ret['error'] != 0 and expect_exception:
+        return True
+    elif ret['error'] == 0 and expect_exception:
+        return False
 
     # return result if there is one
     try:
@@ -84,16 +100,47 @@ class testPlaylist(testTheDog):
             print p['name']
             self.assertTrue(p['name'] == self.pnames[i])
 
-    def test_settoactive(self):
-        pass
+class testPlaylist2(testTheDog):
+    pname = None
 
-    def test_addingremoving(self):
-        pass
+    def setUp(self):
+        dcall("cleandatabase")
+        self.pnames = ["test1", "test2", "test3", "test4", "test5"]
+
+        dbg("adding test playlists")
+        for pn in self.pnames:
+            dcall("addplaylist?name=%s" % pn)
+
+    def test_settoactive(self):
+        dbg("Test setting none existing playlist to active")
+        self.assertTrue(dcall_full("playlist/300/setactive", True))
+
+        plists = dcall("playlists")
+
+        for p in plists:
+            dcall("playlist/%d/setactive" % p['id'])
+            st = dcall("status")
+            self.assertTrue(st['playlist_id'] == p['id'])
+
+    def test_removing(self):
+        plists = dcall("playlists")
+        dbg("Test removing active list (should not be allowed to")
+        dcall_full("playlist/%d/remove" % plists[0]['id'], True);
+        dcall("playlist/%d/remove" % plists[1]['id']);
+        dcall("playlist/%d/remove" % plists[2]['id']);
 
 class testSearching(testTheDog):
     def test_search(self):
         dcall("search?q='bob dylan'")
         dcall("search?q='oasis'")
+
+class testVolume(testTheDog):
+    def test_volume(self):
+        dcall("volume?level=0.1")
+
+class testPlayedMilliSeconds(testTheDog):
+    def test_playedmilliseconds(self):
+        dcall("playedmilliseconds")
 
 #class testUserHandling(testTheDog):
 #    def setUp(self):
@@ -117,54 +164,71 @@ class testVoting(testTheDog):
         vote_all_tracks_to_playlist(1)
         dcall("play")
 
-#class testSkippingAndJumping(testTheDog):
-#    plid = -1
-#
+#class testAddRemoveTrack(testTheDog):
 #    def setUp(self):
-#        pname1 = "test1"
-#        pname2 = "test2"
-#        pname3 = "test3"
+#        dcall("stop")
+#        dcall("cleandatabase")
+#        self.pnames = ["test1", "test2", "test3", "test4", "test5"]
 #
-#        dbg("add some playlists")
-#        dcall("addplaylist?name=%s", pname1)
-#        dcall("addplaylist?name=%s", pname2)
-#        dcall("addplaylist?name=%s", pname3)
+#        dbg("adding test playlists")
+#        for pn in self.pnames:
+#            dcall("addplaylist?name=%s" % pn)
 #
-#        dbg("get all playlists")
-#        playlists = dcall("playlists")
-#
-#        dbg("get first playlists id")
-#        plid = playlists[0].id
-#
-#        dbg("set %s playlist as active" % pname1)
-#        dcall("setactiveplaylist?id=%s", plid)
-#
-#        dbg("add some tracks to playlist")
-#        add_all_tracks_to_playlist(plid)
-#
-#        dbg("vote on some tracks on playlist")
-#        vote_all_tracks_to_playlist(plid)
-#
-#
-#    def test_playingpausingskipping(self):
-#        test_nbr = 50
-#
-#        dbg("playing and pausing for a while (%d play and pausing)" % test_nbr)
-#        for i in range(0,test_nbr):
-#            dcall("play")
-#            dcall("pause")
-#
-#        dbg("skipping for a while (%d skips)" % test_nbr)
-#        dbg("should be safe because some tracks where added")
-#        for i in range(0,test_nbr):
-#            dcall("next")
-#
-#class testStatus(testTheDog):
-#    def setUp(self):
-#        pass
-#
-#    def test_getstatus(self):
-#        dcall("status")
+#    def remove_track(self):
+#        vote_some_tracks_to_playlist(1, 3)
+#        dcall("playlist/%d/tracks")
+
+class testSkippingAndJumping(testTheDog):
+    plid = -1
+
+    def setUp(self):
+        dcall("stop")
+        dcall("cleandatabase")
+        pname1 = "test1"
+        pname2 = "test2"
+        pname3 = "test3"
+
+        dbg("add some playlists")
+        dcall("addplaylist?name=%s" % pname1)
+        dcall("addplaylist?name=%s" % pname2)
+        dcall("addplaylist?name=%s" % pname3)
+
+        dbg("get all playlists")
+        playlists = dcall("playlists")
+
+        dbg("get first playlists id")
+        plid = playlists[0]['id']
+
+        dbg("set %s playlist as active" % pname1)
+        dcall("playlist/%s/setactive" % plid)
+
+        dbg("vote on some tracks on playlist")
+        vote_all_tracks_to_playlist(plid)
+
+
+    def test_playingpausingskipping(self):
+        test_nbr = 50
+
+        dbg("playing and pausing for a while (%d play and pausing)" % test_nbr)
+        for i in range(0,test_nbr):
+            dcall("play")
+            dcall("pause")
+
+        dbg("Listen for 5 seconds")
+        dcall("play")
+        time.sleep(5)
+
+        dbg("skipping for a while (%d skips)" % test_nbr)
+        dbg("should be safe because some tracks where added")
+        for i in range(0,test_nbr):
+            dcall("next")
+
+class testStatus(testTheDog):
+    def setUp(self):
+        pass
+
+    def test_getstatus(self):
+        dcall("status")
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
