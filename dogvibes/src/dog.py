@@ -122,8 +122,6 @@ def run_command(nbr, command, user, avatar_url):
          # TODO: this should be determined on API function return:
         raw = method == 'API_getAlbumArt'
 
-        print c[0]
-
         klass = dogvibes
 
         # strip params from paramters not in the method definition

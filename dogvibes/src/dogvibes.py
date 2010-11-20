@@ -132,8 +132,15 @@ class Dogvibes():
 
     def next_track(self):
         self.set_state(gst.STATE_NULL)
+        track = self.fetch_active_track()
+        if track == None:
+            return
+
         self.remove_track(None, self.fetch_active_track().id)
-        self.start_track(self.fetch_active_track())
+
+        track = self.fetch_active_track()
+        if track != None:
+            self.start_track(track)
 
     def pipeline_message(self, bus, message):
         t = message.type

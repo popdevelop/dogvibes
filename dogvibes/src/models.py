@@ -30,7 +30,7 @@ class User(models.Model):
     avatar_url = models.CharField()
 
     def votes_left(self):
-        return 100 - User.objects.get(id=self.id).vote_set.all().count()
+        return 5 - User.objects.get(id=self.id).vote_set.all().count()
 
     def already_voted(self, entry):
         return entry.vote_set.filter(user=self).count() > 0
