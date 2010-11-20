@@ -33,7 +33,7 @@ var AJAX = {
 
   start: function(server, user) {
     AJAX.server = server + "/" + user;
-    AJAX.timer = setTimeout(AJAX.getStatus, 0);
+    AJAX.timer = setTimeout(AJAX.getstatus, 0);
     return true;
   },
   stop: function() {
@@ -49,7 +49,7 @@ var AJAX = {
     clearTimeout(AJAX.timer);
     if(AJAX.attempts-- > 0) {
       /* Wait longer and longer */
-      AJAX.timer = setTimeout(AJAX.getStatus, AJAX.delay *= 2);
+      AJAX.timer = setTimeout(AJAX.getstatus, AJAX.delay *= 2);
       return;
     }
     /* Give up */
@@ -74,7 +74,7 @@ var AJAX = {
     AJAX.request = $.jsonp(opts);
   },
   /* Private functions */
-  getStatus: function() {
+  getstatus: function() {
     /* TODO: avoid forward reference */
     clearTimeout(AJAX.timer);
     AJAX.send(Dogvibes.defAmp + Dogvibes.cmd.status, "AJAX.handleStatus");
@@ -89,7 +89,7 @@ var AJAX = {
       $(document).trigger("Server.connected");
     }
     clearTimeout(AJAX.timer);
-    AJAX.timer = setTimeout(AJAX.getStatus, AJAX.interval);
+    AJAX.timer = setTimeout(AJAX.getstatus, AJAX.interval);
 
     AJAX.status = data;
     $(document).trigger("Server.status");
@@ -118,7 +118,7 @@ var WSocket = {
       WSocket.ws.onopen = function() {
         clearTimeout(WSocket.timer);
         WSocket.connected = true;
-        WSocket.getStatus();
+        WSocket.getstatus();
         WSocket.attempts = 300;
         WSocket.delay = 2000;
         $(document).trigger("Server.connected");
@@ -149,7 +149,7 @@ var WSocket = {
     WSocket.stop();
   },
   send: function(URL, Success, Context) {
-    Success = typeof(Success) == "undefined" ? "WSocket.getStatus" : Success;
+    Success = typeof(Success) == "undefined" ? "WSocket.getstatus" : Success;
     try {
       if (URL.indexOf('?') == -1) {
         WSocket.ws.send(URL + "?callback="+Success);
@@ -161,7 +161,7 @@ var WSocket = {
 
     }
   },
-  getStatus: function() {
+  getstatus: function() {
     WSocket.send(Dogvibes.defAmp + Dogvibes.cmd.status, "WSocket.handleStatus");
   },
   /* Private functions */
@@ -220,7 +220,7 @@ window.Dogvibes =  {
     getPlayedMilliSecs: "/dogvibes/getPlayedMilliSeconds",
     vote: "/playlist/1/vote?uri=",
     unVote: "/playlist/1/unvote?uri=",
-    getActivity: "/getActivity?limit=",
+    getactivity: "/getactivity?limit=",
     getUserInfo: "/info",
     getLoginInfo: "/getLoginInfo"
   },

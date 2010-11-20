@@ -260,7 +260,7 @@ class testVoting2(testTheDog):
 
         time.sleep(1)
 
-        for i in range(0, 1000000):
+        for i in range(0, 1000):
             remadd = random.randint(0, 100)
             ruser = fake_users[random.randint(0, len(fake_users) - 1)]
             ruri = valid_uris[random.randint(0, len(valid_uris) - 1)]['uri']
@@ -321,8 +321,6 @@ class testSkippingAndJumping(testTheDog):
         dcall("stop")
         dcall("cleandatabase")
         pname1 = "test1"
-        pname2 = "test2"
-        pname3 = "test3"
 
         dbg("add one playlists")
         dcall("addplaylist?name=%s" % pname1)

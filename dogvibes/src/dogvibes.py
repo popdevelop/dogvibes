@@ -29,10 +29,7 @@ from models import Entry
 from models import Vote
 from database import Database
 
-from django.db import models
 from django.db.models import Count
-from django.forms.models import model_to_dict
-
 from django.forms.models import model_to_dict
 
 class DogError(Exception):
@@ -45,7 +42,7 @@ class Dogvibes():
     def __init__(self):
         # load configuration
         try: cfg = config.load("dogvibes.conf")
-        except Exception, e:
+        except:
             print "ERROR: Cannot load configuration file\n"
             sys.exit(1)
 
@@ -80,6 +77,8 @@ class Dogvibes():
         spot_pass = cfg["SPOTIFY_PASS"]
         self.modify_spotifysource(spot_user, spot_pass)
 
+        Playlist.objects.create(name="gyllo")
+
         # playlist stuff
         self.vote_version = 0
         self.playlist_version = 0
@@ -97,7 +96,7 @@ class Dogvibes():
     def get_all_tracks_in_playlist(self, playlistid):
         try:
             playlist = Playlist.get(playlistid)
-        except ValueError as e:
+        except:
             raise ValueError, 'Playlist does not exist'
         tracks = playlist.get_all_tracks()
         ret = [track.__dict__ for track in tracks]
@@ -119,7 +118,7 @@ class Dogvibes():
     def fetch_albumart(self, artist, album, size, request):
         try:
             request.finish(AlbumArt.get_image(artist, album, size), raw = True)
-        except ValueError as e:
+        except:
             request.finish(AlbumArt.get_standard_image(size), raw = True)
 
     def get_album(self, album_uri, request):
@@ -225,7 +224,8 @@ class Dogvibes():
         playlist = self.fetch_active_playlist()
         if playlist.tracks.count() <= 0:
             return None
-        return playlist.tracks.all()[0]
+        entry = playlist.entry_set.all()[0]
+        return entry.track
 
     def remove_track(self, playlist_id, track_id, add_again=False):
         try:
@@ -262,8 +262,6 @@ class Dogvibes():
         # TODO: this is sometimes updated even though a playlist is not updated
         # due to parameters that don't result in a change
         status['playlistversion'] = self.playlist_version
-
-        playlist = self.fetch_active_playlist()
 
         status['playlist_id'] = self.fetch_active_playlist().id
         status['vote_version'] = self.vote_version
@@ -469,6 +467,7 @@ class Dogvibes():
             t = model_to_dict(entry.track)
             t["id"] = entry.id # use the unique id instead of track_id
             t["votes"] = entry.votes
+            t["voters"] = [model_to_dict(v.user) for v in entry.vote_set.select_related()]
             tracks.append(t)
         request.finish(tracks)
 
@@ -480,10 +479,6 @@ class Dogvibes():
         except:
             raise ValueError, 'Playlist does not exist'
         self.needs_push_update = True
-        request.finish()
-
-    def API_list(self, request):
-        print "please implement me"
         request.finish()
 
     # PLAYSLIST STUFF ENDS HERE -------------------------------------------------
@@ -500,7 +495,6 @@ class Dogvibes():
         request.finish()
 
     def API_play(self, request):
-        playlist = self.fetch_active_playlist()
         track = self.fetch_active_track()
         if track != None:
             self.start_track(track)
@@ -548,7 +542,7 @@ class Dogvibes():
         request.push({'volume': self.speakers[0].get_volume()})
         request.finish()
 
-    def API_getActivity(self, limit, request):
+    def API_getactivity(self, limit, request):
         activities = []
         for v in Vote.objects.all()[0:int(limit)]:
             a = model_to_dict(v.user)
