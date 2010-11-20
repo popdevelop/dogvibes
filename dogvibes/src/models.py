@@ -58,7 +58,9 @@ class Playlist(models.Model):
 class Entry(PositionalSortMixIn, models.Model):
     playlist = models.ForeignKey(Playlist)
     track = models.ForeignKey(Track)
+    added = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
     def __unicode__(self):
         return "%s: %s [%d, %s]" % (self.playlist.name, self.track.title, self.position, self.created_at)
     class Meta:

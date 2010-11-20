@@ -23,7 +23,7 @@ class Database():
         self.add_statement('''create table if not exists playlists (id INTEGER PRIMARY KEY, name TEXT)''')
         # Table for storing the relation between playlists and tracks, i.e.
         # the contents of a playlists as references
-        self.add_statement('''create table if not exists entries (id INTEGER PRIMARY KEY, playlist_id INTEGER, track_id INTEGER, position INTEGER, created_at TEXT)''')
+        self.add_statement('''create table if not exists entries (id INTEGER PRIMARY KEY, playlist_id INTEGER, track_id INTEGER, position INTEGER, added BOOLEAN, created_at TEXT)''')
         self.commit()
 
     def commit_statement(self, statement, args = []):

@@ -6,6 +6,7 @@ import urllib
 import signal
 import inspect
 import string
+import random
 
 #change the following setup for testing
 #*********************************
@@ -225,30 +226,58 @@ class testVoting(testTheDog):
         info = dcall("info")
         self.assertTrue(info['votes'] == self.nbr_votes, "Incorrect vote count")
 
-#    def test_voting_positions(self):
-#        # add one vote for gyllen
-#        amp("addVote?uri=%s&user=gyllen" % valid_uris[0]['uri'])
-#        res = amp("getUserInfo?user=gyllen")
-#
-#        amp("play")
-#
-#        # check integrity
-#        self.assertTrue(res['votes'] == 4, "Incorrect vote count")
-#        amp("addVote?uri=%s&user=gyllen" % valid_uris[4]['uri'])
-#
-#        list = amp("getAllTracksInQueue")
-#        self.assertTrue(list[1]['uri'] == valid_uris[4]['uri'], "Inconsistency on moving tracks with voting")
-#        res = amp("getUserInfo?user=gyllen")
-#        # check integrity
-#        print res
-#        self.assertTrue(res['votes'] == 3, "Incorrect vote count user has %s votes" % res['votes'])
-#        amp("nextTrack")
-#        res = amp("getUserInfo?user=gyllen")
-#        print res
-#        # check integrity
-#        self.assertTrue(res['votes'] == 4, "Incorrect vote count user has %s votes" % res['votes'])
-#
-#        amp("pause")
+class testVoting2(testTheDog):
+    plid = -1
+
+    def setUp(self):
+        dcall("stop")
+        dcall("cleandatabase")
+        self.pnames = ["test1"]
+
+        dbg("adding test playlists")
+        for pn in self.pnames:
+            dcall("addplaylist?name=%s" % pn)
+
+        dbg("get playlists")
+        playlists = dcall("playlists")
+        self.plid = playlists[0]['id']
+
+    def check_list_order(self):
+        lastvote = 10000
+
+        tracks = dcall("playlist/%d/tracks" % self.plid)
+        for t in tracks[1:]:
+            self.assertTrue(lastvote >= int(t['votes']), "list not correctly ordered lastvote:%s votes:%s" % (lastvote, t['votes']))
+            lastvote = int(t['votes'])
+
+    def test_voting_bad_playlist(self):
+        dcall("playlist/-1/tracks", expect_exception=True)
+
+    def test_voting_random(self):
+        fake_users = ["gyllen", "brissmyr", "jimtegel", "tilljoel", "cirkkajoel", "nisse", "pelle", "kalle", "david", "sven", "arne", "kallekanin", "kalleduva", "dennis", "katt", "hatt", "bip", "bap", "tap", "zap", "zup"]
+        vote_some_tracks_to_playlist(self.plid, 1)
+        dcall("play")
+
+        time.sleep(1)
+
+        for i in range(0, 1000000):
+            remadd = random.randint(0, 100)
+            ruser = fake_users[random.randint(0, len(fake_users) - 1)]
+            ruri = valid_uris[random.randint(0, len(valid_uris) - 1)]['uri']
+            if remadd < 30:
+                dcall("playlist/%s/vote?uri=%s" % (self.plid, ruri), ruser, True)
+            elif remadd < 60:
+                dcall("playlist/%s/unvote?uri=%s" % (self.plid, ruri), ruser, True)
+            elif remadd < 90:
+                dcall("playlist/%s/addtrack?uri=%s" % (self.plid, ruri), ruser, True)
+            else:
+                res = dcall("status")
+                try:
+                    dcall("seek?mseconds=%d" % (int(res['duration'] - 5000)))
+                except:
+                    print "Could not seek"
+
+            self.check_list_order()
 
 class testVoteRemoveTrack(testTheDog):
     def setUp(self):
@@ -319,15 +348,15 @@ class testSkippingAndJumping(testTheDog):
         for i in range(0, self.test_nbr):
             dcall("next")
 
-#    def test_playingpausing(self):
-#        dbg("playing and pausing for a while (%d play and pausing)" % self.test_nbr)
-#        for i in range(0, self.test_nbr):
-#            dcall("play")
-#            dcall("pause")
-#
-#        dbg("Listen for 5 seconds")
-#        dcall("play")
-#        time.sleep(5)
+    def test_playingpausing(self):
+        dbg("playing and pausing for a while (%d play and pausing)" % self.test_nbr)
+        for i in range(0, self.test_nbr):
+            dcall("play")
+            dcall("pause")
+
+        dbg("Listen for 5 seconds")
+        dcall("play")
+        time.sleep(5)
 
 class testStatus(testTheDog):
     def test_getstatus(self):

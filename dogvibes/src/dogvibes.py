@@ -136,7 +136,7 @@ class Dogvibes():
         if track == None:
             return
 
-        self.remove_track(None, self.fetch_active_track().id)
+        self.remove_track(None, track.id, add_again=True)
 
         track = self.fetch_active_track()
         if track != None:
@@ -227,9 +227,16 @@ class Dogvibes():
             return None
         return playlist.tracks.all()[0]
 
-    def remove_track(self, playlist_id, track_id):
+    def remove_track(self, playlist_id, track_id, add_again=False):
         try:
-            Entry.objects.get(id=track_id).delete()
+            en = Entry.objects.get(id=track_id)
+            playlist = en.playlist
+            track = en.track
+            added = en.added
+            en.delete()
+            if added and add_again:
+                entry = Entry(track=track, playlist=playlist, added=True)
+                entry.save()
         except:
             raise ValueError, 'Track does not exist'
 
@@ -293,13 +300,13 @@ class Dogvibes():
         t["id"] = self.active_playlists_track_id
         return t
 
-    def sort_playlist(self, playqueue):
-        # Sort tracks in playqueue on number of votes and creation time
-        if self.get_state() == "playing":
-            playing = playqueue.entry_set.all()[0]
-        for i, e in enumerate(playqueue.entry_set.annotate(num_votes=Count('vote')).order_by('-num_votes', 'created_at')):
+    def sort_playlist(self, playlist):
+        playing = playlist.entry_set.all()[0]
+        for i, e in enumerate(playlist.entry_set.annotate(num_votes=Count('vote')).order_by('-num_votes', 'created_at')):
             e.position = i
+            print model_to_dict(e)
             e.save()
+
         # If we'e playing, move that track to the top again
         if self.get_state() == "playing":
             playing.insert_at(0)
@@ -311,9 +318,10 @@ class Dogvibes():
     def API_vote(self, uri, playlistid, request):
         user, created = User.objects.get_or_create(username=request.user, defaults={'avatar_url': request.avatar_url})
         track = self.create_tracks_from_uri(uri)[0]
-        playlist = Playlist.objects.get(id=playlistid)
-
-        # FIXME return error
+        try:
+            playlist = Playlist.objects.get(id=playlistid)
+        except:
+            raise ValueError, 'Playlist does not exist'
 
         # Get the first matching track if several with the same URI
         matching_tracks = playlist.tracks.filter(uri=uri)
@@ -353,14 +361,14 @@ class Dogvibes():
     def API_unvote(self, playlistid, uri, request):
         user, created = User.objects.get_or_create(username=request.user, defaults={'avatar_url': request.avatar_url})
         track = self.create_tracks_from_uri(uri)[0]
-        playqueue = Playlist.objects.get(id=playlistid)
+        playlist = Playlist.objects.get(id=playlistid)
 
         # Get the first matching track if several with the same URI
         # NOTE: this will possibly choose the wrong track if several tracks
         # with the same URI are in the list
-        matching_tracks = playqueue.tracks.filter(uri=uri)
+        matching_tracks = playlist.tracks.filter(uri=uri)
         if not matching_tracks:
-            entry = Entry.objects.create(track=track, playlist=playqueue)
+            entry = Entry.objects.create(track=track, playlist=playlist)
         else:
             entry = matching_tracks[0].entry_set.get()
 
@@ -371,8 +379,32 @@ class Dogvibes():
 
         # Remove vote
         entry.vote_set.filter(user=user).delete()
-        self.sort_playlist(playqueue)
+        self.sort_playlist(playlist)
 
+        self.needs_push_update = True
+        self.playlist_version += 1
+        self.vote_version += 1
+        request.push({'playlist_version': self.playlist_version})
+        request.push({'vote_version': self.vote_version})
+        request.finish()
+
+    def API_addtrack(self, playlistid, uri, request):
+        user, created = User.objects.get_or_create(username=request.user, defaults={'avatar_url': request.avatar_url})
+        track = self.create_tracks_from_uri(uri)[0]
+        try:
+            playlist = Playlist.objects.get(id=playlistid)
+        except:
+            raise ValueError, 'Playlist does not exist'
+
+        # Get the first matching track if several with the same URI
+        matching_tracks = playlist.tracks.filter(uri=uri)
+        if not matching_tracks:
+            entry = Entry(track=track, playlist=playlist, added=True)
+            entry.save()
+        else:
+            raise ValueError, 'Track already exists in playlist'
+
+        self.sort_playlist(playlist)
         self.needs_push_update = True
         self.playlist_version += 1
         self.vote_version += 1
@@ -427,9 +459,16 @@ class Dogvibes():
     def API_tracks(self, playlistid, request):
         # TODO: I don't know how to join these automatically
         tracks = []
-        for entry in Playlist.objects.get(id=playlistid).entry_set.all():
+
+        try:
+            playlists = Playlist.objects.get(id=playlistid).entry_set.all().annotate(votes=Count('vote'))
+        except:
+            raise ValueError, "Playlist does not exist"
+
+        for entry in playlists:
             t = model_to_dict(entry.track)
             t["id"] = entry.id # use the unique id instead of track_id
+            t["votes"] = entry.votes
             tracks.append(t)
         request.finish(tracks)
 
@@ -489,7 +528,6 @@ class Dogvibes():
         self.vote_version += 1
         request.push({'playlist_id': self.fetch_active_playlist().id})
         request.push({'state': self.get_state()})
-        #request.push(self.track_to_client())
         request.finish()
 
     # SKIPPING AND JUMPING STUFF ENDS HERE -------------------------------------------------
